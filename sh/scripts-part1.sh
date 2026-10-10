@@ -63,10 +63,11 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
         mkdir -p target/linux/mediatek/filogic/base-files
         cp -rf "$GL_TMP_DIR"/target/linux/mediatek/filogic/base-files/* target/linux/mediatek/filogic/base-files/ 2>/dev/null || true
 
-        # 3. Gerätedefinition nur einbinden, wenn sie noch nicht existiert (verhindert recipe-overrides)
-        if ! grep -q "define Device/glinet_gl-mt5000" target/linux/mediatek/image/filogic.mk 2>/dev/null; then
+        # 3. Gerätedefinition nur einbinden, wenn noch kein passendes Target existiert
+        if ! grep -q "define Device/glinet_gl-mt5000" target/linux/mediatek/image/*.mk 2>/dev/null; then
             GL_DEVICE_MK=$(find "$GL_TMP_DIR"/target/linux/mediatek/image/ -name "*.mk" -exec grep -l "define Device/glinet_gl-mt5000" {} + | head -n 1)
             if [ -n "$GL_DEVICE_MK" ]; then
+                echo "" >> target/linux/mediatek/image/filogic.mk
                 sed -n '/define Device\/glinet_gl-mt5000/,/endef/p' "$GL_DEVICE_MK" >> target/linux/mediatek/image/filogic.mk
                 echo '$(eval $(call BuildImage,glinet_gl-mt5000))' >> target/linux/mediatek/image/filogic.mk
             fi
