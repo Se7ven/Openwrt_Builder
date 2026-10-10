@@ -89,14 +89,11 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
             done
         fi
 
-        # 4b. Treiber-Quellen direkt spiegeln
+        # 4b. Treiber-Quellen direkt in den Zielbaum spiegeln
         mkdir -p target/linux/mediatek/files/drivers/net/dsa/realtek
         find "$GL_TMP_DIR" -type f \( -name "*rtl8366*" -o -name "*realtek*" \) -path "*/drivers/net/dsa/*" -exec cp -f {} target/linux/mediatek/files/drivers/net/dsa/realtek/ \; 2>/dev/null || true
 
-        # 4c. Kernel-Modul-Makefiles von GL.iNet übernehmen
-        cp -f "$GL_TMP_DIR"/package/kernel/linux/modules/netdevices.mk package/kernel/linux/modules/netdevices.mk 2>/dev/null || true
-
-        # 5. Kernel-Konfiguration anpassen (UB, RB, MDIO & SMI)
+        # 5. Kernel-Konfiguration anpassen (RTL8366UB & MDIO fest einkompilieren)
         for cfg in target/linux/mediatek/filogic/config-* target/linux/mediatek/config-*; do
             if [ -f "$cfg" ]; then
                 sed -i '/CONFIG_NET_DSA/d' "$cfg"
