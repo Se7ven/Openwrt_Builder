@@ -96,18 +96,20 @@ jobs:
         cd openwrt
         [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
 
-        # Reale OpenWrt-Paketsymbole für Realtek DSA erzwingen
+        # Reale Kernel- & DSA-Symbole für Realtek RTL8366UB via MDIO erzwingen
         echo "CONFIG_PACKAGE_kmod-dsa=y" >> .config
         echo "CONFIG_PACKAGE_kmod-dsa-realtek=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-dsa-rtl8366rb=y" >> .config
         echo "CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y" >> .config
+        echo "CONFIG_NET_DSA_REALTEK=y" >> .config
+        echo "CONFIG_NET_DSA_REALTEK_RTL8366UB=y" >> .config
+        echo "CONFIG_NET_DSA_REALTEK_RTL8366RB=y" >> .config
+        echo "CONFIG_NET_DSA_REALTEK_MDIO=y" >> .config
+        echo "CONFIG_NET_DSA_REALTEK_SMI=y" >> .config
 
         make defconfig
-        make -C target/linux olddefconfig || true
 
         echo "=== Überprüfe Status der DSA-Treiber in .config ==="
-        grep -E "CONFIG_PACKAGE_kmod-dsa.*=y|CONFIG_PACKAGE_kmod-switch.*=y" .config || true
+        grep -E "CONFIG_PACKAGE_kmod-dsa.*=y|CONFIG_NET_DSA.*=y" .config || true
 
     - name: Paketquellen herunterladen (make download)
       id: package
@@ -141,7 +143,7 @@ jobs:
         name: ImmortalWrt Brume 3 (GL-MT5000) ${{ steps.compile.outputs.file-date }}
         tag_name: ImmortalWrt_GL-MT5000_${{ steps.compile.outputs.file-date }}
         body: |
-          ImmortalWrt Build für GL.iNet MT5000 mit integriertem RTL8366 DSA-Treiber und USB-Storage Support.
+          ImmortalWrt Build für GL.iNet MT5000 mit integriertem RTL8366UB DSA-Treiber (MDIO) und USB-Storage Support.
         files: |
           openwrt/bin/targets/*/*/*sysupgrade*
           openwrt/bin/targets/*/*/*factory*
