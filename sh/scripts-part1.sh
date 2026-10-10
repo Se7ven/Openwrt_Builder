@@ -41,13 +41,11 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
     set_default_ip "192.168.9.1" "mt3600be"
 
 # 1. ORIGINALE GL.iNet PIPELINE (Build filogic.yml -> workflow_name: GL-MT5000)
-# Klont bereits direkt GLiNet-Tech/openwrt.git -> Keine Injektion erforderlich!
 elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
     echo ">>> Workflow GL-MT5000 (Filogic Quellbaum) aktiv. Basis-Setup ohne Injektion <<<"
     set_default_ip "192.168.100.1" "GL-MT5000-native"
 
-# 2. DIE STANDALONE-WORKFLOWS (ImmortalWrt Master/Stable & OpenWrt 25.12)
-# Diese klonen Upstream und brauchen die Injektion aus GL.iNet
+# 2. STANDALONE WORKFLOWS (ImmortalWrt Master/25.12 & OpenWrt 25.12)
 elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" ]]; then
     echo ">>> Workflow: $WORKFLOW_NAME -> Führe GL.iNet Treiberinjektion (DTS / RTL8366UB/MDIO) durch <<<"
 
@@ -65,19 +63,16 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
         mkdir -p target/linux/mediatek/filogic/base-files
         cp -rf "$GL_TMP_DIR"/target/linux/mediatek/filogic/base-files/* target/linux/mediatek/filogic/base-files/ 2>/dev/null || true
 
-        # 3. Gerätedefinition in filogic.mk einbinden
-        if ! grep -q "glinet_gl-mt5000" target/linux/mediatek/image/filogic.mk 2>/dev/null; then
-            for mk in "$GL_TMP_DIR"/target/linux/mediatek/image/*.mk; do
-                if grep -q "glinet_gl-mt5000" "$mk" 2>/dev/null; then
-                    sed -n '/define Device\/glinet_gl-mt5000/,/endef/p' "$mk" >> target/linux/mediatek/image/filogic.mk
-                    echo '$(eval $(call BuildImage,glinet_gl-mt5000))' >> target/linux/mediatek/image/filogic.mk
-                    echo 'TARGET_DEVICES += glinet_gl-mt5000' >> target/linux/mediatek/image/filogic.mk
-                    break
-                fi
-            done
+        # 3. Gerätedefinition nur einbinden, wenn sie noch nicht existiert (verhindert recipe-overrides)
+        if ! grep -q "define Device/glinet_gl-mt5000" target/linux/mediatek/image/filogic.mk 2>/dev/null; then
+            GL_DEVICE_MK=$(find "$GL_TMP_DIR"/target/linux/mediatek/image/ -name "*.mk" -exec grep -l "define Device/glinet_gl-mt5000" {} + | head -n 1)
+            if [ -n "$GL_DEVICE_MK" ]; then
+                sed -n '/define Device\/glinet_gl-mt5000/,/endef/p' "$GL_DEVICE_MK" >> target/linux/mediatek/image/filogic.mk
+                echo '$(eval $(call BuildImage,glinet_gl-mt5000))' >> target/linux/mediatek/image/filogic.mk
+            fi
         fi
 
-        # 4. Kernel-Patches für Realtek RTL8366 übertragen
+        # 4. Kernel-Patches für Realtek übertragen
         GL_PATCH_DIR=$(find "$GL_TMP_DIR"/target/linux/mediatek/ -maxdepth 1 -type d -name "patches-*" 2>/dev/null | head -n 1)
         if [ -n "$GL_PATCH_DIR" ] && [ -d "$GL_PATCH_DIR" ]; then
             for pdir in target/linux/mediatek/patches-*; do
@@ -89,11 +84,11 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
             done
         fi
 
-        # 4b. Treiber-Quellen direkt in den Zielbaum spiegeln
+        # 4b. Treiber-Quellen spiegeln
         mkdir -p target/linux/mediatek/files/drivers/net/dsa/realtek
         find "$GL_TMP_DIR" -type f \( -name "*rtl8366*" -o -name "*realtek*" \) -path "*/drivers/net/dsa/*" -exec cp -f {} target/linux/mediatek/files/drivers/net/dsa/realtek/ \; 2>/dev/null || true
 
-        # 5. Kernel-Konfiguration anpassen (RTL8366UB & MDIO fest einkompilieren)
+        # 5. Kernel-Konfiguration anpassen (UB, RB, MDIO & SMI fest im Kernel)
         for cfg in target/linux/mediatek/filogic/config-* target/linux/mediatek/config-*; do
             if [ -f "$cfg" ]; then
                 sed -i '/CONFIG_NET_DSA/d' "$cfg"
