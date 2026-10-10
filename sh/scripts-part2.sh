@@ -147,12 +147,18 @@ EOF
 
     # 3. Kernel- und Modulpakete für Realtek Switch, USB Mass Storage, Dateisysteme & Cake aktivieren
     cat << 'EOF' >> .config
-# --- Switch / DSA Treiber ---
+# --- Switch / DSA Treiber (alle Varianten für UB/RB, MDIO & SMI) ---
 CONFIG_PACKAGE_kmod-dsa=y
+CONFIG_PACKAGE_kmod-dsa-core=y
 CONFIG_PACKAGE_kmod-dsa-realtek=y
+CONFIG_PACKAGE_kmod-dsa-realtek-mdio=y
+CONFIG_PACKAGE_kmod-dsa-realtek-smi=y
+CONFIG_PACKAGE_kmod-dsa-rtl8366ub=y
 CONFIG_PACKAGE_kmod-dsa-rtl8366rb=y
-CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
 CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
+CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
+CONFIG_PACKAGE_kmod-switch-rtl8366ub=y
+CONFIG_PACKAGE_kmod-switch-rtl8366rb=y
 
 # --- USB Storage & Block Devices ---
 CONFIG_PACKAGE_kmod-usb-core=y
@@ -208,7 +214,7 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
-# 2. NEUER SEPARATER WORKFLOW: ImmortalWrt Brume 3 stable (25.12)
+# 2. SEPARATER WORKFLOW: ImmortalWrt Brume 3 stable (25.12)
 elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" ]]; then
     echo ">>> Konfiguriere Immortalwrt Brume 3 stable <<<"
 
@@ -250,12 +256,18 @@ config interface 'wan'
 EOF
 
     cat << 'EOF' >> .config
-# --- Switch / DSA Treiber ---
+# --- Switch / DSA Treiber (alle Varianten für UB/RB, MDIO & SMI) ---
 CONFIG_PACKAGE_kmod-dsa=y
+CONFIG_PACKAGE_kmod-dsa-core=y
 CONFIG_PACKAGE_kmod-dsa-realtek=y
+CONFIG_PACKAGE_kmod-dsa-realtek-mdio=y
+CONFIG_PACKAGE_kmod-dsa-realtek-smi=y
+CONFIG_PACKAGE_kmod-dsa-rtl8366ub=y
 CONFIG_PACKAGE_kmod-dsa-rtl8366rb=y
-CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
 CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
+CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
+CONFIG_PACKAGE_kmod-switch-rtl8366ub=y
+CONFIG_PACKAGE_kmod-switch-rtl8366rb=y
 
 # --- USB Storage & Block Devices ---
 CONFIG_PACKAGE_kmod-usb-core=y
@@ -309,7 +321,7 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
-# 3. NEUER SEPARATER WORKFLOW: OpenWrt Brume 3 stable (25.12)
+# 3. SEPARATER WORKFLOW: OpenWrt Brume 3 stable (25.12)
 elif [[ "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
     echo ">>> Konfiguriere GL-MT5000 für offizielles OpenWrt 25.12 <<<"
 
@@ -351,12 +363,18 @@ config interface 'wan'
 EOF
 
     cat << 'EOF' >> .config
-# --- Switch / DSA Treiber ---
+# --- Switch / DSA Treiber (alle Varianten für UB/RB, MDIO & SMI) ---
 CONFIG_PACKAGE_kmod-dsa=y
+CONFIG_PACKAGE_kmod-dsa-core=y
 CONFIG_PACKAGE_kmod-dsa-realtek=y
+CONFIG_PACKAGE_kmod-dsa-realtek-mdio=y
+CONFIG_PACKAGE_kmod-dsa-realtek-smi=y
+CONFIG_PACKAGE_kmod-dsa-rtl8366ub=y
 CONFIG_PACKAGE_kmod-dsa-rtl8366rb=y
-CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
 CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
+CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
+CONFIG_PACKAGE_kmod-switch-rtl8366ub=y
+CONFIG_PACKAGE_kmod-switch-rtl8366rb=y
 
 # --- USB Storage & Block Devices ---
 CONFIG_PACKAGE_kmod-usb-core=y
@@ -400,7 +418,7 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-gl-mt5000-wan-rescue
 
-# STANDARD-ZWEIG (Hier landet Build filogic.yml mit workflow_name: GL-MT5000 sowie alle anderen Router)
+# STANDARD-ZWEIG (für Build filogic.yml mit workflow_name: GL-MT5000 und alle weiteren Geräte)
 else
     patch_rust_makefile
     reset_custom_package_dir
