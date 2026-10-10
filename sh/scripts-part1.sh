@@ -49,7 +49,7 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
 # 2. DIE STANDALONE-WORKFLOWS (ImmortalWrt Master/Stable & OpenWrt 25.12)
 # Diese klonen Upstream und brauchen die Injektion aus GL.iNet
 elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" ]]; then
-    echo ">>> Workflow: $WORKFLOW_NAME -> Führe GL.iNet Treiberinjektion (DTS / RTL8366) durch <<<"
+    echo ">>> Workflow: $WORKFLOW_NAME -> Führe GL.iNet Treiberinjektion (DTS / RTL8366UB/MDIO) durch <<<"
 
     GL_TMP_DIR="/tmp/glinet_mt5000_source"
     rm -rf "$GL_TMP_DIR"
@@ -93,7 +93,10 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
         mkdir -p target/linux/mediatek/files/drivers/net/dsa/realtek
         find "$GL_TMP_DIR" -type f \( -name "*rtl8366*" -o -name "*realtek*" \) -path "*/drivers/net/dsa/*" -exec cp -f {} target/linux/mediatek/files/drivers/net/dsa/realtek/ \; 2>/dev/null || true
 
-        # 5. Kernel-Konfiguration anpassen
+        # 4c. Kernel-Modul-Makefiles von GL.iNet übernehmen
+        cp -f "$GL_TMP_DIR"/package/kernel/linux/modules/netdevices.mk package/kernel/linux/modules/netdevices.mk 2>/dev/null || true
+
+        # 5. Kernel-Konfiguration anpassen (UB, RB, MDIO & SMI)
         for cfg in target/linux/mediatek/filogic/config-* target/linux/mediatek/config-*; do
             if [ -f "$cfg" ]; then
                 sed -i '/CONFIG_NET_DSA/d' "$cfg"
@@ -103,8 +106,8 @@ CONFIG_NET_DSA=y
 CONFIG_NET_DSA_TAG_RTL4_A=y
 CONFIG_NET_DSA_TAG_NONE=y
 CONFIG_NET_DSA_REALTEK=y
-CONFIG_NET_DSA_REALTEK_RTL8366RB=y
 CONFIG_NET_DSA_REALTEK_RTL8366UB=y
+CONFIG_NET_DSA_REALTEK_RTL8366RB=y
 CONFIG_NET_DSA_REALTEK_SMI=y
 CONFIG_NET_DSA_REALTEK_MDIO=y
 CONFIG_FIXED_PHY=y
