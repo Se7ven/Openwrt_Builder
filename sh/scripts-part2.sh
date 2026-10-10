@@ -106,7 +106,6 @@ echo "WORKFLOW_NAME: $WORKFLOW_NAME"
 if [[ "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" ]]; then
     echo ">>> Konfiguriere GL-MT5000 (ImmortalWrt) Board- und Treibereinstellungen <<<"
 
-    # 1. 02_network patchen
     NETWORK_SETUP="target/linux/mediatek/filogic/base-files/etc/board.d/02_network"
     if [ -f "$NETWORK_SETUP" ]; then
         if ! grep -q "glinet,gl-mt5000" "$NETWORK_SETUP"; then
@@ -117,7 +116,6 @@ glinet,gl-mt5000)\
         fi
     fi
 
-    # 2. Statische Fallback-Netzwerkkonfiguration in RootFS injizieren
     mkdir -p package/base-files/files/etc/config
     cat << 'EOF' > package/base-files/files/etc/config/network
 config interface 'loopback'
@@ -145,7 +143,6 @@ config interface 'wan'
 	option netmask '255.255.255.0'
 EOF
 
-    # 3. Kernel- und Modulpakete für Realtek Switch, USB Mass Storage, Dateisysteme & Cake aktivieren
     cat << 'EOF' >> .config
 # --- Switch / DSA Treiber & Kernel-Builtins ---
 CONFIG_PACKAGE_kmod-dsa=y
@@ -187,7 +184,6 @@ CONFIG_PACKAGE_tc-tiny=y
 CONFIG_PACKAGE_luci-theme-footstrap=y
 EOF
 
-    # 4. WAN-Rescue Firewall-Regel hinterlegen
     mkdir -p package/base-files/files/etc/uci-defaults/
     cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-gl-mt5000-wan-rescue
 uci -q batch << 'UCIBATCH'
@@ -203,7 +199,6 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-gl-mt5000-wan-rescue
 
-    # 5. Standard-Theme auf Footstrap vorkonfigurieren
     cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 uci set luci.main.mediaurlbase='/luci-static/footstrap'
 uci commit luci
