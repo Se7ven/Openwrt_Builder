@@ -147,18 +147,15 @@ EOF
 
     # 3. Kernel- und Modulpakete für Realtek Switch, USB Mass Storage, Dateisysteme & Cake aktivieren
     cat << 'EOF' >> .config
-# --- Switch / DSA Treiber (alle Varianten für UB/RB, MDIO & SMI) ---
+# --- Switch / DSA Treiber & Kernel-Builtins ---
 CONFIG_PACKAGE_kmod-dsa=y
-CONFIG_PACKAGE_kmod-dsa-core=y
 CONFIG_PACKAGE_kmod-dsa-realtek=y
-CONFIG_PACKAGE_kmod-dsa-realtek-mdio=y
-CONFIG_PACKAGE_kmod-dsa-realtek-smi=y
-CONFIG_PACKAGE_kmod-dsa-rtl8366ub=y
-CONFIG_PACKAGE_kmod-dsa-rtl8366rb=y
 CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
-CONFIG_PACKAGE_kmod-switch-rtl8366ub=y
-CONFIG_PACKAGE_kmod-switch-rtl8366rb=y
+CONFIG_NET_DSA_REALTEK=y
+CONFIG_NET_DSA_REALTEK_RTL8366UB=y
+CONFIG_NET_DSA_REALTEK_RTL8366RB=y
+CONFIG_NET_DSA_REALTEK_MDIO=y
+CONFIG_NET_DSA_REALTEK_SMI=y
 
 # --- USB Storage & Block Devices ---
 CONFIG_PACKAGE_kmod-usb-core=y
@@ -256,18 +253,15 @@ config interface 'wan'
 EOF
 
     cat << 'EOF' >> .config
-# --- Switch / DSA Treiber (alle Varianten für UB/RB, MDIO & SMI) ---
+# --- Switch / DSA Treiber & Kernel-Builtins ---
 CONFIG_PACKAGE_kmod-dsa=y
-CONFIG_PACKAGE_kmod-dsa-core=y
 CONFIG_PACKAGE_kmod-dsa-realtek=y
-CONFIG_PACKAGE_kmod-dsa-realtek-mdio=y
-CONFIG_PACKAGE_kmod-dsa-realtek-smi=y
-CONFIG_PACKAGE_kmod-dsa-rtl8366ub=y
-CONFIG_PACKAGE_kmod-dsa-rtl8366rb=y
 CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
-CONFIG_PACKAGE_kmod-switch-rtl8366ub=y
-CONFIG_PACKAGE_kmod-switch-rtl8366rb=y
+CONFIG_NET_DSA_REALTEK=y
+CONFIG_NET_DSA_REALTEK_RTL8366UB=y
+CONFIG_NET_DSA_REALTEK_RTL8366RB=y
+CONFIG_NET_DSA_REALTEK_MDIO=y
+CONFIG_NET_DSA_REALTEK_SMI=y
 
 # --- USB Storage & Block Devices ---
 CONFIG_PACKAGE_kmod-usb-core=y
@@ -363,18 +357,15 @@ config interface 'wan'
 EOF
 
     cat << 'EOF' >> .config
-# --- Switch / DSA Treiber (alle Varianten für UB/RB, MDIO & SMI) ---
+# --- Switch / DSA Treiber & Kernel-Builtins ---
 CONFIG_PACKAGE_kmod-dsa=y
-CONFIG_PACKAGE_kmod-dsa-core=y
 CONFIG_PACKAGE_kmod-dsa-realtek=y
-CONFIG_PACKAGE_kmod-dsa-realtek-mdio=y
-CONFIG_PACKAGE_kmod-dsa-realtek-smi=y
-CONFIG_PACKAGE_kmod-dsa-rtl8366ub=y
-CONFIG_PACKAGE_kmod-dsa-rtl8366rb=y
 CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
-CONFIG_PACKAGE_kmod-switch-rtl8366ub=y
-CONFIG_PACKAGE_kmod-switch-rtl8366rb=y
+CONFIG_NET_DSA_REALTEK=y
+CONFIG_NET_DSA_REALTEK_RTL8366UB=y
+CONFIG_NET_DSA_REALTEK_RTL8366RB=y
+CONFIG_NET_DSA_REALTEK_MDIO=y
+CONFIG_NET_DSA_REALTEK_SMI=y
 
 # --- USB Storage & Block Devices ---
 CONFIG_PACKAGE_kmod-usb-core=y
