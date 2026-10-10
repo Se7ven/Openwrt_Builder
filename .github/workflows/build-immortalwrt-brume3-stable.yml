@@ -75,21 +75,23 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
 
-        # DSA-Treiber direkt in die Konfiguration injizieren
+        # DSA-Treiber direkt in die Konfiguration injizieren (RTL8366UB via MDIO)
         cat >> .config << 'EOF'
         CONFIG_PACKAGE_kmod-dsa=y
         CONFIG_PACKAGE_kmod-dsa-realtek=y
-        CONFIG_PACKAGE_kmod-dsa-rtl8366rb=y
-        CONFIG_PACKAGE_kmod-switch-rtl8366-smi=y
         CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
+        CONFIG_NET_DSA_REALTEK=y
+        CONFIG_NET_DSA_REALTEK_RTL8366UB=y
+        CONFIG_NET_DSA_REALTEK_RTL8366RB=y
+        CONFIG_NET_DSA_REALTEK_MDIO=y
+        CONFIG_NET_DSA_REALTEK_SMI=y
         EOF
 
         # Konfiguration bereinigen und Abhängigkeiten auflösen
         make defconfig
-        make target/linux olddefconfig || true
 
         echo "=== Überprüfe Status der DSA-Treiber in .config ==="
-        grep -E "CONFIG_PACKAGE_kmod-(dsa|switch)" .config || true
+        grep -E "CONFIG_PACKAGE_kmod-(dsa|switch)|CONFIG_NET_DSA.*=y" .config || true
 
     - name: Paketquellen herunterladen (make download)
       id: package
