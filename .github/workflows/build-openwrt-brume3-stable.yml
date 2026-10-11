@@ -9,7 +9,7 @@ permissions:
 env:
   WORKFLOW_NAME: "OpenWrt Brume 3 stable"
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: ./config/openwrt.config
+  CONFIG_FILE: ./config/mt5000.config
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
   UPLOAD_BIN_DIR: false
@@ -71,19 +71,14 @@ jobs:
 
       - name: Konfiguration anwenden und DIY 2 ausführen
         run: |
-          [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config || true
+          [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
           chmod +x $DIY_P2_SH
           cd openwrt
           $GITHUB_WORKSPACE/$DIY_P2_SH
 
-          sed -i '/CONFIG_TARGET_DEVICE_/d' .config 2>/dev/null || true
-          echo "CONFIG_TARGET_mediatek=y" >> .config
-          echo "CONFIG_TARGET_mediatek_filogic=y" >> .config
-          echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y" >> .config
-          echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_gl-mt5000=y" >> .config
           make defconfig
           echo "=== Überprüfe gewähltes Target-Gerät ==="
-          grep "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
+          grep "CONFIG_TARGET.*DEVICE.*=y" .config || true
 
       - name: Paketquellen herunterladen
         run: |
@@ -96,8 +91,6 @@ jobs:
         run: |
           cd openwrt
           echo "$(nproc) Thread(s) beim Kompilieren"
-          make -j$(nproc) tools/compile || make -j1 V=s tools/compile
-          make -j$(nproc) toolchain/compile || make -j1 V=s toolchain/compile
           make -j$(nproc) || make -j1 V=s
           grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
           echo "compile=success" >> $GITHUB_OUTPUT
@@ -112,7 +105,7 @@ jobs:
         with:
           tag_name: GL-MT5000_openwrt_25.12_${{ steps.compile.outputs.file-date }}
           name: OpenWrt 25.12 Stable ${{ steps.compile.outputs.file-date }}
-          body: Offizielle OpenWrt 25.12 Feeds auf nativem GL-MT5000 Quellbaum.
+          body: Offizielle OpenWrt 25.12 Feeds auf nativer mt5000 Konfiguration.
           files: |
             openwrt/bin/targets/*/*/*sysupgrade*
             openwrt/bin/targets/*/*/*factory*
