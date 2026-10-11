@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Dateiname: scripts-part2.sh
-# Beschreibung: OpenWrt DIY Skript Teil 2 (wird nach Feed-Updates ausgeführt)
+# Beschreibung: OpenWrt DIY Skript Teil 2
 #
 
 TARGET_DIR="${PWD}/package/custom"
@@ -103,7 +103,6 @@ rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/cus
 if [[ "$WORKFLOW_NAME" == "GL-MT5000" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
     echo ">>> Konfiguriere Netzwerk, Cake & LuCI für GL-MT5000 <<<"
 
-    # Standard-Netzwerkkonfiguration für den Brume 3 (LAN: 192.168.100.1, WAN: DHCP auf eth1)
     mkdir -p package/base-files/files/etc/config
     cat << 'EOF' > package/base-files/files/etc/config/network
 config interface 'loopback'
@@ -129,7 +128,6 @@ config interface 'wan'
 	option proto 'dhcp'
 EOF
 
-    # Paket-Zusatzoptionen für Speicher, Dateisysteme & SQM Cake
     cat << 'EOF' >> .config
 # --- USB Storage & Block Devices ---
 CONFIG_PACKAGE_kmod-usb-core=y
@@ -162,7 +160,6 @@ CONFIG_PACKAGE_luci=y
 CONFIG_PACKAGE_luci-theme-footstrap=y
 EOF
 
-    # UCI-Default: Footstrap-Theme aktivieren
     mkdir -p package/base-files/files/etc/uci-defaults/
     cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 uci set luci.main.mediaurlbase='/luci-static/footstrap'
