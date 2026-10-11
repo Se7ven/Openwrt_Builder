@@ -105,11 +105,8 @@ jobs:
       id: compile
       run: |
         cd openwrt
-        # Neue Kconfig-Symbole des Kernels automatisch ohne interaktive Abfrage auflösen
-        make kernel_olddefconfig
-
         echo -e "$(nproc) Thread(s) beim Kompilieren"
-        make -j$(nproc) || make -j1 V=s target/linux/compile
+        yes "" | make -j$(nproc) || make -j1 V=s target/linux/compile
         echo "status=success" >> $GITHUB_OUTPUT
         grep "CONFIG_TARGET=[a-z0-9]" .config | head -n 1 | sed 's/CONFIG_TARGET=/DEVICE_TARGET=/' >> $GITHUB_ENV
         grep "CONFIG_TARGET_SUBTARGET=[a-z0-9]" .config | head -n 1 | sed 's/CONFIG_TARGET_SUBTARGET=/DEVICE_SUBTARGET=/' >> $GITHUB_ENV
