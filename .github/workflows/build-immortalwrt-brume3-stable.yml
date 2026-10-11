@@ -70,16 +70,19 @@ jobs:
 
       - name: Konfiguration anwenden und DIY 2 ausführen
         run: |
-          [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
+          [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config || true
           chmod +x $DIY_P2_SH
           cd openwrt
           $GITHUB_WORKSPACE/$DIY_P2_SH
+
+          sed -i '/CONFIG_TARGET_DEVICE_/d' .config 2>/dev/null || true
           echo "CONFIG_TARGET_mediatek=y" >> .config
           echo "CONFIG_TARGET_mediatek_filogic=y" >> .config
           echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y" >> .config
+          echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_gl-mt5000=y" >> .config
           make defconfig
           echo "=== Überprüfe gewähltes Target-Gerät ==="
-          grep "^CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
+          grep "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
 
       - name: Paketquellen herunterladen
         run: |
@@ -92,10 +95,10 @@ jobs:
         run: |
           cd openwrt
           echo "$(nproc) Thread(s) beim Kompilieren"
-          yes "" | make -j$(nproc) || make -j1 V=s target/linux/compile
-          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+          yes "" | make -j$(nproc) target/linux/compile || make -j1 V=s target/linux/compile
+          make -j$(nproc) target/linux/install PROFILE=glinet_gl-mt5000 || make -j$(nproc) target/linux/install PROFILE=gl-mt5000 || make -j$(nproc)
           echo "compile=success" >> $GITHUB_OUTPUT
-          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
+          echo "device-name=gl-mt5000" >> $GITHUB_OUTPUT
           echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
       - name: Release erstellen
