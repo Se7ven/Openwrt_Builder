@@ -102,7 +102,7 @@ clone_custom_repos() {
 echo "--- DIY Part 2: Skriptausführung gestartet ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
 
-# 1. ORIGINALE IMMORTALWRT PIPELINE (Build immortalwrt / gl-mt5000_immortalwrt)
+# 1. IMMORTALWRT PIPELINE (Build immortalwrt / gl-mt5000_immortalwrt)
 if [[ "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" ]]; then
     echo ">>> Konfiguriere GL-MT5000 (ImmortalWrt) Board- und Treibereinstellungen <<<"
 
@@ -206,7 +206,7 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
-# 2. SEPARATER WORKFLOW: ImmortalWrt Brume 3 stable (25.12)
+# 2. IMMORTALWRT 25.12 STABLE
 elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" ]]; then
     echo ">>> Konfiguriere Immortalwrt Brume 3 stable <<<"
 
@@ -310,7 +310,7 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
-# 3. SEPARATER WORKFLOW: OpenWrt Brume 3 stable (25.12)
+# 3. OPENWRT 25.12 STABLE
 elif [[ "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
     echo ">>> Konfiguriere GL-MT5000 für offizielles OpenWrt 25.12 <<<"
 
