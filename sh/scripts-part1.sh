@@ -47,7 +47,7 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
 
 # 2. STANDALONE WORKFLOWS (ImmortalWrt Master/25.12 & OpenWrt 25.12)
 elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" ]]; then
-    echo ">>> Workflow: $WORKFLOW_NAME -> Führe GL.iNet Treiberinjektion (DTS / RTL8366UB/MDIO) durch <<<"
+    echo ">>> Workflow: $WORKFLOW_NAME -> Führe GL.iNet Treiber- und Device-Injektion durch <<<"
 
     GL_TMP_DIR="/tmp/glinet_mt5000_source"
     rm -rf "$GL_TMP_DIR"
@@ -63,14 +63,20 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
         mkdir -p target/linux/mediatek/filogic/base-files
         cp -rf "$GL_TMP_DIR"/target/linux/mediatek/filogic/base-files/* target/linux/mediatek/filogic/base-files/ 2>/dev/null || true
 
-        # 3. Gerätedefinition in filogic.mk einbinden (falls noch nicht vorhanden)
-        if ! grep -q "define Device/glinet_gl-mt5000" target/linux/mediatek/image/*.mk 2>/dev/null; then
-            GL_DEVICE_MK=$(find "$GL_TMP_DIR"/target/linux/mediatek/image/ -name "*.mk" -exec grep -l "define Device/glinet_gl-mt5000" {} + | head -n 1)
-            if [ -n "$GL_DEVICE_MK" ]; then
-                echo "" >> target/linux/mediatek/image/filogic.mk
-                sed -n '/define Device\/glinet_gl-mt5000/,/endef/p' "$GL_DEVICE_MK" >> target/linux/mediatek/image/filogic.mk
-                echo '$(eval $(call BuildImage,glinet_gl-mt5000))' >> target/linux/mediatek/image/filogic.mk
-            fi
+        # 3. Gerätedefinition für GL-MT5000 direkt und verbindlich in filogic.mk anlegen
+        if ! grep -q "define Device/glinet_gl-mt5000" target/linux/mediatek/image/filogic.mk 2>/dev/null; then
+            echo ">>> Trage Device/glinet_gl-mt5000 fest in filogic.mk ein <<<"
+            cat << 'EOF' >> target/linux/mediatek/image/filogic.mk
+
+define Device/glinet_gl-mt5000
+  DEVICE_VENDOR := GL.iNet
+  DEVICE_MODEL := GL-MT5000
+  DEVICE_DTS := mt7987a-glinet-gl-mt5000
+  DEVICE_PACKAGES := kmod-fs-f2fs f2fs-tools e2fsprogs losetup
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+TARGET_DEVICES += glinet_gl-mt5000
+EOF
         fi
 
         # 4. RTL8366UB & MDIO Treiberdateien in das Kernel-Files-Verzeichnis spiegeln
@@ -83,7 +89,6 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
         if [ -n "$GL_PATCH_DIR" ] && [ -d "$GL_PATCH_DIR" ]; then
             for pdir in target/linux/mediatek/patches-*; do
                 if [ -d "$pdir" ]; then
-                    echo "Kopiere Realtek-Patches aus $GL_PATCH_DIR nach $pdir"
                     cp -f "$GL_PATCH_DIR"/*rtl8366* "$pdir"/ 2>/dev/null || true
                     cp -f "$GL_PATCH_DIR"/*realtek* "$pdir"/ 2>/dev/null || true
                 fi
