@@ -1,10 +1,5 @@
 #!/bin/bash
 #
-# Copyright (c) 2019-2020 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
 # Dateiname: scripts-part2.sh
 # Beschreibung: OpenWrt DIY Skript Teil 2 (wird nach dem Aktualisieren der Feeds ausgeführt)
 #
@@ -102,9 +97,9 @@ clone_custom_repos() {
 echo "--- DIY Part 2: Skriptausführung gestartet ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
 
-# 1. IMMORTALWRT PIPELINE (Build immortalwrt / gl-mt5000_immortalwrt)
-if [[ "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" ]]; then
-    echo ">>> Konfiguriere GL-MT5000 (ImmortalWrt) Board- und Treibereinstellungen <<<"
+# GEMEINSAMES SETUP FÜR ALLE MT5000 WORKFLOWS
+if [[ "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
+    echo ">>> Konfiguriere Target, Device und Netzwerk für GL-MT5000 <<<"
 
     NETWORK_SETUP="target/linux/mediatek/filogic/base-files/etc/board.d/02_network"
     if [ -f "$NETWORK_SETUP" ]; then
@@ -143,7 +138,15 @@ config interface 'wan'
 	option netmask '255.255.255.0'
 EOF
 
+    # Lösche alle alten Target- und Device-Auswahlen aus .config
+    sed -i '/CONFIG_TARGET_/d' .config 2>/dev/null || true
+
     cat << 'EOF' >> .config
+# --- Zielplattform & Exklusives GL-MT5000 Profil ---
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
+
 # --- Switch / DSA Treiber & Kernel-Builtins ---
 CONFIG_PACKAGE_kmod-dsa=y
 CONFIG_PACKAGE_kmod-dsa-realtek=y
@@ -206,205 +209,7 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
-# 2. IMMORTALWRT 25.12 STABLE
-elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" ]]; then
-    echo ">>> Konfiguriere Immortalwrt Brume 3 stable <<<"
-
-    NETWORK_SETUP="target/linux/mediatek/filogic/base-files/etc/board.d/02_network"
-    if [ -f "$NETWORK_SETUP" ]; then
-        if ! grep -q "glinet,gl-mt5000" "$NETWORK_SETUP"; then
-            sed -i '/glinet,gl-mt6000)/i \
-glinet,gl-mt5000)\
-\tucidef_set_interfaces_lan_wan "lan1 lan2" "eth1"\
-\t;;' "$NETWORK_SETUP"
-        fi
-    fi
-
-    mkdir -p package/base-files/files/etc/config
-    cat << 'EOF' > package/base-files/files/etc/config/network
-config interface 'loopback'
-	option device 'lo'
-	option proto 'static'
-	option ipaddr '127.0.0.1'
-	option netmask '255.0.0.0'
-
-config device
-	option name 'br-lan'
-	option type 'bridge'
-	list ports 'lan1'
-	list ports 'lan2'
-
-config interface 'lan'
-	option device 'br-lan'
-	option proto 'static'
-	option ipaddr '192.168.100.1'
-	option netmask '255.255.255.0'
-
-config interface 'wan'
-	option device 'eth1'
-	option proto 'static'
-	option ipaddr '192.168.10.1'
-	option netmask '255.255.255.0'
-EOF
-
-    cat << 'EOF' >> .config
-# --- Switch / DSA Treiber & Kernel-Builtins ---
-CONFIG_PACKAGE_kmod-dsa=y
-CONFIG_PACKAGE_kmod-dsa-realtek=y
-CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-CONFIG_NET_DSA_REALTEK=y
-CONFIG_NET_DSA_REALTEK_RTL8366UB=y
-CONFIG_NET_DSA_REALTEK_RTL8366RB=y
-CONFIG_NET_DSA_REALTEK_MDIO=y
-CONFIG_NET_DSA_REALTEK_SMI=y
-
-# --- USB Storage & Block Devices ---
-CONFIG_PACKAGE_kmod-usb-core=y
-CONFIG_PACKAGE_kmod-usb3=y
-CONFIG_PACKAGE_kmod-usb-storage=y
-CONFIG_PACKAGE_kmod-usb-storage-uas=y
-CONFIG_PACKAGE_kmod-scsi-core=y
-CONFIG_PACKAGE_block-mount=y
-CONFIG_PACKAGE_e2fsprogs=y
-CONFIG_PACKAGE_f2fs-tools=y
-CONFIG_PACKAGE_dosfstools=y
-
-# --- Dateisysteme ---
-CONFIG_PACKAGE_kmod-fs-ext4=y
-CONFIG_PACKAGE_kmod-fs-f2fs=y
-CONFIG_PACKAGE_kmod-fs-vfat=y
-CONFIG_PACKAGE_kmod-nls-cp437=y
-CONFIG_PACKAGE_kmod-nls-iso8859-1=y
-CONFIG_PACKAGE_kmod-nls-utf8=y
-
-# --- SQM QoS mit Cake ---
-CONFIG_PACKAGE_sqm-scripts=y
-CONFIG_PACKAGE_luci-app-sqm=y
-CONFIG_PACKAGE_kmod-sched-cake=y
-CONFIG_PACKAGE_kmod-sched-core=y
-CONFIG_PACKAGE_tc-tiny=y
-
-# --- LuCI Theme ---
-CONFIG_PACKAGE_luci-theme-footstrap=y
-EOF
-
-    mkdir -p package/base-files/files/etc/uci-defaults/
-    cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-gl-mt5000-wan-rescue
-uci -q batch << 'UCIBATCH'
-set firewall.wan_rescue=rule
-set firewall.wan_rescue.name='Allow-WAN-Access-Rescue'
-set firewall.wan_rescue.src='wan'
-set firewall.wan_rescue.proto='tcp'
-set firewall.wan_rescue.dest_port='22 80 443'
-set firewall.wan_rescue.target='ACCEPT'
-commit firewall
-UCIBATCH
-exit 0
-EOF
-    chmod +x package/base-files/files/etc/uci-defaults/99-gl-mt5000-wan-rescue
-
-    cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
-uci set luci.main.mediaurlbase='/luci-static/footstrap'
-uci commit luci
-exit 0
-EOF
-    chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
-
-# 3. OPENWRT 25.12 STABLE
-elif [[ "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
-    echo ">>> Konfiguriere GL-MT5000 für offizielles OpenWrt 25.12 <<<"
-
-    NETWORK_SETUP="target/linux/mediatek/filogic/base-files/etc/board.d/02_network"
-    if [ -f "$NETWORK_SETUP" ]; then
-        if ! grep -q "glinet,gl-mt5000" "$NETWORK_SETUP"; then
-            sed -i '/glinet,gl-mt6000)/i \
-glinet,gl-mt5000)\
-\tucidef_set_interfaces_lan_wan "lan1 lan2" "eth1"\
-\t;;' "$NETWORK_SETUP"
-        fi
-    fi
-
-    mkdir -p package/base-files/files/etc/config
-    cat << 'EOF' > package/base-files/files/etc/config/network
-config interface 'loopback'
-	option device 'lo'
-	option proto 'static'
-	option ipaddr '127.0.0.1'
-	option netmask '255.0.0.0'
-
-config device
-	option name 'br-lan'
-	option type 'bridge'
-	list ports 'lan1'
-	list ports 'lan2'
-
-config interface 'lan'
-	option device 'br-lan'
-	option proto 'static'
-	option ipaddr '192.168.100.1'
-	option netmask '255.255.255.0'
-
-config interface 'wan'
-	option device 'eth1'
-	option proto 'static'
-	option ipaddr '192.168.10.1'
-	option netmask '255.255.255.0'
-EOF
-
-    cat << 'EOF' >> .config
-# --- Switch / DSA Treiber & Kernel-Builtins ---
-CONFIG_PACKAGE_kmod-dsa=y
-CONFIG_PACKAGE_kmod-dsa-realtek=y
-CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-CONFIG_NET_DSA_REALTEK=y
-CONFIG_NET_DSA_REALTEK_RTL8366UB=y
-CONFIG_NET_DSA_REALTEK_RTL8366RB=y
-CONFIG_NET_DSA_REALTEK_MDIO=y
-CONFIG_NET_DSA_REALTEK_SMI=y
-
-# --- USB Storage & Block Devices ---
-CONFIG_PACKAGE_kmod-usb-core=y
-CONFIG_PACKAGE_kmod-usb3=y
-CONFIG_PACKAGE_kmod-usb-storage=y
-CONFIG_PACKAGE_kmod-usb-storage-uas=y
-CONFIG_PACKAGE_kmod-scsi-core=y
-CONFIG_PACKAGE_block-mount=y
-CONFIG_PACKAGE_e2fsprogs=y
-CONFIG_PACKAGE_f2fs-tools=y
-CONFIG_PACKAGE_dosfstools=y
-
-# --- Dateisysteme ---
-CONFIG_PACKAGE_kmod-fs-ext4=y
-CONFIG_PACKAGE_kmod-fs-f2fs=y
-CONFIG_PACKAGE_kmod-fs-vfat=y
-CONFIG_PACKAGE_kmod-nls-cp437=y
-CONFIG_PACKAGE_kmod-nls-iso8859-1=y
-CONFIG_PACKAGE_kmod-nls-utf8=y
-
-# --- SQM QoS mit Cake ---
-CONFIG_PACKAGE_sqm-scripts=y
-CONFIG_PACKAGE_luci-app-sqm=y
-CONFIG_PACKAGE_kmod-sched-cake=y
-CONFIG_PACKAGE_kmod-sched-core=y
-CONFIG_PACKAGE_tc-tiny=y
-EOF
-
-    mkdir -p package/base-files/files/etc/uci-defaults/
-    cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-gl-mt5000-wan-rescue
-uci -q batch << 'UCIBATCH'
-set firewall.wan_rescue=rule
-set firewall.wan_rescue.name='Allow-WAN-Access-Rescue'
-set firewall.wan_rescue.src='wan'
-set firewall.wan_rescue.proto='tcp'
-set firewall.wan_rescue.dest_port='22 80 443'
-set firewall.wan_rescue.target='ACCEPT'
-commit firewall
-UCIBATCH
-exit 0
-EOF
-    chmod +x package/base-files/files/etc/uci-defaults/99-gl-mt5000-wan-rescue
-
-# STANDARD-ZWEIG
+# STANDARD-ZWEIG FÜR ANDERE GERÄTE
 else
     patch_rust_makefile
     reset_custom_package_dir
