@@ -8,8 +8,6 @@ permissions:
 
 env:
   WORKFLOW_NAME: "OpenWrt Brume 3 stable"
-  REPO_URL: https://github.com/openwrt/openwrt.git
-  REPO_BRANCH: openwrt-25.12
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/openwrt.config
   DIY_P1_SH: ./sh/scripts-part1.sh
@@ -55,105 +53,64 @@ jobs:
       - name: Quellcode klonen
         working-directory: /workdir
         run: |
-          df -hT $PWD
-          git clone $REPO_URL -b $REPO_BRANCH openwrt
+          git clone --depth 1 -b mt5000 https://github.com/GLiNet-Tech/openwrt.git openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
-      - name: Feeds laden und DIY-Skript Teil 1 ausführen
+      - name: Feeds konfigurieren und DIY 1 ausführen
         run: |
-          [ -e $FEEDS_CONF ] && cp $FEEDS_CONF openwrt/feeds.conf.default
-          chmod +x $DIY_P1_SH
           cd openwrt
+          echo "src-git packages https://github.com/openwrt/packages.git;openwrt-25.12" > feeds.conf.default
+          echo "src-git luci https://github.com/openwrt/luci.git;openwrt-25.12" >> feeds.conf.default
+          echo "src-git routing https://github.com/openwrt/routing.git;openwrt-25.12" >> feeds.conf.default
+          echo "src-git telephony https://github.com/openwrt/telephony.git;openwrt-25.12" >> feeds.conf.default
+          echo "src-git footstrap https://github.com/VizzleTF/luci-theme-footstrap.git" >> feeds.conf.default
+          chmod +x $GITHUB_WORKSPACE/$DIY_P1_SH
           $GITHUB_WORKSPACE/$DIY_P1_SH
           ./scripts/feeds update -a
-
-      - name: Feeds installieren
-        run: |
-          cd openwrt
           ./scripts/feeds install -a
 
-      - name: Benutzerdefinierte Konfiguration anwenden und DSA-Treiber injizieren
+      - name: Konfiguration anwenden und DIY 2 ausführen
         run: |
           [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
           chmod +x $DIY_P2_SH
           cd openwrt
           $GITHUB_WORKSPACE/$DIY_P2_SH
-
           echo "CONFIG_TARGET_mediatek=y" >> .config
           echo "CONFIG_TARGET_mediatek_filogic=y" >> .config
           echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-dsa=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-dsa-realtek=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK_RTL8366UB=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK_RTL8366RB=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK_MDIO=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK_SMI=y" >> .config
-
-          rm -rf tmp/.config* tmp/.targetinfo
           make defconfig
-
           echo "=== Überprüfe gewähltes Target-Gerät ==="
           grep "^CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
 
-      - name: Paketquellen herunterladen (make download)
-        id: package
+      - name: Paketquellen herunterladen
         run: |
           cd openwrt
           make download -j8
-          find dl -size -1024c -exec ls -l {} \;
           find dl -size -1024c -exec rm -f {} \;
 
       - name: Firmware kompilieren
         id: compile
         run: |
           cd openwrt
-          echo -e "$(nproc) Thread(s) beim Kompilieren"
+          echo "$(nproc) Thread(s) beim Kompilieren"
           yes "" | make -j$(nproc) || make -j1 V=s target/linux/compile
-          echo "status=success" >> $GITHUB_OUTPUT
-          grep "CONFIG_TARGET=[a-z0-9]" .config | head -n 1 | sed 's/CONFIG_TARGET=/DEVICE_TARGET=/' >> $GITHUB_ENV
-          grep "CONFIG_TARGET_SUBTARGET=[a-z0-9]" .config | head -n 1 | sed 's/CONFIG_TARGET_SUBTARGET=/DEVICE_SUBTARGET=/' >> $GITHUB_ENV
+          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+          echo "compile=success" >> $GITHUB_OUTPUT
+          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
+          echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
-      - name: Firmware-Dateien organisieren
-        id: organize
-        if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
-        run: |
-          cd openwrt/bin/targets/*/*
-          rm -rf packages
-          echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-          echo "status=success" >> $GITHUB_OUTPUT
-
-      - name: bin-Verzeichnis als Artefakt hochladen
-        uses: actions/upload-artifact@v4
-        if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
-        with:
-          name: OpenWrt_bin_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}
-          path: openwrt/bin
-
-      - name: Firmware-Dateien als Artefakt hochladen
-        uses: actions/upload-artifact@v4
-        if: steps.organize.outputs.status == 'success' && !cancelled()
-        with:
-          name: OpenWrt_firmware_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}
-          path: ${{ env.FIRMWARE }}
-
-      - name: Release-Tag erstellen
-        id: tag
-        if: env.UPLOAD_RELEASE == 'true' && !cancelled()
-        run: |
-          echo "release_tag=$(date +"%Y.%m.%d-%H%M")-openwrt-25.12" >> $GITHUB_OUTPUT
-          touch release.txt
-          echo "Offizieller OpenWrt Stable Build (openwrt-25.12) für GL-MT5000" >> release.txt
-          echo "status=success" >> $GITHUB_OUTPUT
-
-      - name: Release auf GitHub veröffentlichen
+      - name: Release erstellen
         uses: softprops/action-gh-release@v2
-        if: steps.tag.outputs.release_tag && !cancelled()
+        if: steps.compile.outputs.compile == 'success' && !cancelled()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.tag.outputs.release_tag }}
-          body_path: release.txt
-          files: ${{ env.FIRMWARE }}/*
-          
+          tag_name: GL-MT5000_openwrt_25.12_${{ steps.compile.outputs.file-date }}
+          name: OpenWrt 25.12 Stable ${{ steps.compile.outputs.file-date }}
+          body: Offizielle OpenWrt 25.12 Feeds auf nativem GL-MT5000 Quellbaum.
+          files: |
+            openwrt/bin/targets/*/*/*sysupgrade*
+            openwrt/bin/targets/*/*/*factory*
+            openwrt/bin/targets/*/*/*manifest*
+            openwrt/bin/targets/*/*/*sha256sums
+            
