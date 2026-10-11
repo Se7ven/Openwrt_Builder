@@ -124,6 +124,10 @@ jobs:
       id: compile
       run: |
         cd openwrt
+        # Neue Kconfig-Symbole des Kernels automatisch ohne interaktive Abfrage auflösen
+        make kernel_olddefconfig
+
+        echo -e "$(nproc) Thread(s) beim Kompilieren"
         make -j$(nproc) || make -j1 V=s target/linux/compile
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
@@ -135,15 +139,15 @@ jobs:
       uses: actions/upload-artifact@v4
       if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
       with:
-        name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}
+        name: "ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}"
         path: openwrt/bin
 
     - name: GitHub Release erstellen
       uses: softprops/action-gh-release@v2
       if: steps.compile.outputs.compile == 'success' && !cancelled()
       with:
-        name: ImmortalWrt Brume 3 (GL-MT5000) ${{ steps.compile.outputs.file-date }}
-        tag_name: ImmortalWrt_GL-MT5000_${{ steps.compile.outputs.file-date }}
+        name: "ImmortalWrt Brume 3 (GL-MT5000) ${{ steps.compile.outputs.file-date }}"
+        tag_name: "ImmortalWrt_GL-MT5000_${{ steps.compile.outputs.file-date }}"
         body: |
           ImmortalWrt Master Build für GL.iNet MT5000 mit integriertem RTL8366UB DSA-Treiber (MDIO) und USB-Storage Support.
         files: |
