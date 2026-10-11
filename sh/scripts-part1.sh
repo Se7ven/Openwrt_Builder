@@ -63,7 +63,7 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
         mkdir -p target/linux/mediatek/filogic/base-files
         cp -rf "$GL_TMP_DIR"/target/linux/mediatek/filogic/base-files/* target/linux/mediatek/filogic/base-files/ 2>/dev/null || true
 
-        # 3. Gerätedefinition nur einbinden, wenn sie noch nicht existiert
+        # 3. Gerätedefinition in filogic.mk einbinden (falls noch nicht vorhanden)
         if ! grep -q "define Device/glinet_gl-mt5000" target/linux/mediatek/image/*.mk 2>/dev/null; then
             GL_DEVICE_MK=$(find "$GL_TMP_DIR"/target/linux/mediatek/image/ -name "*.mk" -exec grep -l "define Device/glinet_gl-mt5000" {} + | head -n 1)
             if [ -n "$GL_DEVICE_MK" ]; then
@@ -73,7 +73,7 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
             fi
         fi
 
-        # 4. Kernel-Treiberquellcode (rtl8366ub / realtek-mdio) direkt in den Kernel-Quellbaum spiegeln
+        # 4. RTL8366UB & MDIO Treiberdateien in das Kernel-Files-Verzeichnis spiegeln
         mkdir -p target/linux/generic/files/drivers/net/dsa/realtek
         find "$GL_TMP_DIR" -type f \( -name "*rtl8366*" -o -name "*realtek*" \) -path "*/drivers/net/dsa/*" \
             -exec cp -f {} target/linux/generic/files/drivers/net/dsa/realtek/ \; 2>/dev/null || true
@@ -93,7 +93,7 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
         # 5. Kernel-Flags direkt in die Kernel-Konfigurationsdateien schreiben
         for cfg in target/linux/mediatek/filogic/config-* target/linux/mediatek/config-*; do
             if [ -f "$cfg" ]; then
-                sed -i '/CONFIG_NET_DSA/d' "$cfg"
+                sed -i '/CONFIG_NET_DSA_REALTEK/d' "$cfg"
                 sed -i '/CONFIG_FIXED_PHY/d' "$cfg"
                 cat << 'EOF' >> "$cfg"
 CONFIG_NET_DSA=y
@@ -108,6 +108,21 @@ CONFIG_FIXED_PHY=y
 CONFIG_USB_NET_DRIVERS=y
 CONFIG_USB_RTL8152=y
 CONFIG_USB_NET_CDC_NCM=y
+CONFIG_NET_DSA_AN8855=n
+CONFIG_NET_DSA_BCM_SF2=n
+CONFIG_NET_DSA_LOOP=n
+CONFIG_NET_DSA_HIRSCHMANN_HELLCREEK=n
+CONFIG_NET_DSA_MICROCHIP_KSZ9477=n
+CONFIG_NET_DSA_MICROCHIP_KSZ8795=n
+CONFIG_NET_DSA_MV88E6060=n
+CONFIG_NET_DSA_MV88E6XXX=n
+CONFIG_NET_DSA_AR9331=n
+CONFIG_NET_DSA_SJA1105=n
+CONFIG_NET_DSA_XRS700X=n
+CONFIG_NET_DSA_QCA8K=n
+CONFIG_NET_DSA_REALTEK_RTL8365MB=n
+CONFIG_NET_DSA_SMSC_LAN9303=n
+CONFIG_NET_DSA_VITESSE_VSC73XX=n
 EOF
             fi
         done
