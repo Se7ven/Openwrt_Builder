@@ -81,7 +81,9 @@ jobs:
           ./scripts/feeds update -a
 
       - name: Feeds installieren
-        run: cd openwrt && ./scripts/feeds install -a
+        run: |
+          cd openwrt
+          ./scripts/feeds install -a
 
       - name: Benutzerdefinierte Konfiguration anwenden und DIY-Skript Teil 2 ausführen
         run: |
@@ -96,21 +98,19 @@ jobs:
           cd openwrt
           [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
 
-          # MT5000 Target-Profil und DSA-Treiber verbindlich festschreiben
-          cat >> .config << 'EOF'
-          CONFIG_TARGET_mediatek=y
-          CONFIG_TARGET_mediatek_filogic=y
-          CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
-          CONFIG_PACKAGE_kmod-dsa=y
-          CONFIG_PACKAGE_kmod-dsa-realtek=y
-          CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-          CONFIG_NET_DSA_REALTEK=y
-          CONFIG_NET_DSA_REALTEK_RTL8366UB=y
-          CONFIG_NET_DSA_REALTEK_RTL8366RB=y
-          CONFIG_NET_DSA_REALTEK_MDIO=y
-          CONFIG_NET_DSA_REALTEK_SMI=y
-          EOF
+          echo "CONFIG_TARGET_mediatek=y" >> .config
+          echo "CONFIG_TARGET_mediatek_filogic=y" >> .config
+          echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-dsa=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-dsa-realtek=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK_RTL8366UB=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK_RTL8366RB=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK_MDIO=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK_SMI=y" >> .config
 
+          rm -rf tmp/.config* tmp/.targetinfo
           make defconfig
 
           echo "=== Überprüfe gewähltes Target-Gerät ==="
@@ -139,15 +139,15 @@ jobs:
         uses: actions/upload-artifact@v4
         if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
         with:
-          name: "ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}"
+          name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}
           path: openwrt/bin
 
       - name: GitHub Release erstellen
         uses: softprops/action-gh-release@v2
         if: steps.compile.outputs.compile == 'success' && !cancelled()
         with:
-          name: "ImmortalWrt Brume 3 (GL-MT5000) ${{ steps.compile.outputs.file-date }}"
-          tag_name: "ImmortalWrt_GL-MT5000_${{ steps.compile.outputs.file-date }}"
+          name: ImmortalWrt Brume 3 (GL-MT5000) ${{ steps.compile.outputs.file-date }}
+          tag_name: ImmortalWrt_GL-MT5000_${{ steps.compile.outputs.file-date }}
           body: |
             ImmortalWrt Master Build für GL.iNet MT5000 mit integriertem RTL8366UB DSA-Treiber (MDIO) und USB-Storage Support.
           files: |
@@ -155,3 +155,4 @@ jobs:
             openwrt/bin/targets/*/*/*factory*
             openwrt/bin/targets/*/*/*manifest*
             openwrt/bin/targets/*/*/*sha256sums
+            
