@@ -38,6 +38,7 @@ declare -A REPOS=(
     ["https://github.com/gaoderby/luci-app-kms.git"]=""
     ["https://github.com/sbwml/luci-app-ramfree.git"]=""
     ["https://github.com/lisaac/luci-app-diskman"]=""
+	["https://github.com/tty228/luci-app-wechatpush.git"]=""
 )
 
 CONFLICTING_MAKEFILE_KEYWORDS=(
