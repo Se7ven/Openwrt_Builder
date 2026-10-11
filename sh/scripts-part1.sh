@@ -54,19 +54,23 @@ elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == 
     git clone --depth 1 -b mt5000 https://github.com/GLiNet-Tech/openwrt.git "$GL_TMP_DIR"
 
     if [[ -d "$GL_TMP_DIR" ]]; then
-        # 1. DTS-Dateien importieren
+        # 1. DTS-Dateien in alle relevanten Quellpfade kopieren
         mkdir -p target/linux/mediatek/dts target/linux/mediatek/files/arch/arm64/boot/dts/mediatek
         cp -f "$GL_TMP_DIR"/target/linux/mediatek/dts/*gl-mt5000* target/linux/mediatek/dts/ 2>/dev/null || true
         cp -f "$GL_TMP_DIR"/target/linux/mediatek/files/arch/arm64/boot/dts/mediatek/*gl-mt5000* target/linux/mediatek/files/arch/arm64/boot/dts/mediatek/ 2>/dev/null || true
+
+        # Falls DTS als mt7981 oder mt7987 benannt ist, passenden Alias sicherstellen
+        find target/linux/mediatek/ -name "*gl-mt5000*.dts*" -exec cp -f {} target/linux/mediatek/dts/mt7987a-glinet-gl-mt5000.dts \; 2>/dev/null || true
 
         # 2. Base-Files und Board-Erkennung übertragen
         mkdir -p target/linux/mediatek/filogic/base-files
         cp -rf "$GL_TMP_DIR"/target/linux/mediatek/filogic/base-files/* target/linux/mediatek/filogic/base-files/ 2>/dev/null || true
 
-        # 3. Gerätedefinition für GL-MT5000 direkt und verbindlich in filogic.mk anlegen
-        if ! grep -q "define Device/glinet_gl-mt5000" target/linux/mediatek/image/filogic.mk 2>/dev/null; then
-            echo ">>> Trage Device/glinet_gl-mt5000 fest in filogic.mk ein <<<"
-            cat << 'EOF' >> target/linux/mediatek/image/filogic.mk
+        # 3. Gerätedefinition für GL-MT5000 verbindlich in filogic.mk anlegen
+        sed -i '/define Device\/glinet_gl-mt5000/,/endef/d' target/linux/mediatek/image/filogic.mk 2>/dev/null || true
+        sed -i '/TARGET_DEVICES += glinet_gl-mt5000/d' target/linux/mediatek/image/filogic.mk 2>/dev/null || true
+
+        cat << 'EOF' >> target/linux/mediatek/image/filogic.mk
 
 define Device/glinet_gl-mt5000
   DEVICE_VENDOR := GL.iNet
@@ -77,7 +81,6 @@ define Device/glinet_gl-mt5000
 endef
 TARGET_DEVICES += glinet_gl-mt5000
 EOF
-        fi
 
         # 4. RTL8366UB & MDIO Treiberdateien in das Kernel-Files-Verzeichnis spiegeln
         mkdir -p target/linux/generic/files/drivers/net/dsa/realtek
@@ -89,6 +92,7 @@ EOF
         if [ -n "$GL_PATCH_DIR" ] && [ -d "$GL_PATCH_DIR" ]; then
             for pdir in target/linux/mediatek/patches-*; do
                 if [ -d "$pdir" ]; then
+                    echo "Kopiere Realtek-Patches aus $GL_PATCH_DIR nach $pdir"
                     cp -f "$GL_PATCH_DIR"/*rtl8366* "$pdir"/ 2>/dev/null || true
                     cp -f "$GL_PATCH_DIR"/*realtek* "$pdir"/ 2>/dev/null || true
                 fi
@@ -134,6 +138,9 @@ EOF
 
         rm -rf "$GL_TMP_DIR"
     fi
+
+    # Menübaum-Cache sofort leeren, damit das neue Device registriert wird
+    rm -rf tmp/.config* tmp/.targetinfo tmp/.packageinfo
 
     if ! grep -q "luci-theme-footstrap" feeds.conf.default 2>/dev/null; then
         echo "src-git footstrap https://github.com/VizzleTF/luci-theme-footstrap.git" >> "feeds.conf.default"
