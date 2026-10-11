@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Dateiname: scripts-part1.sh
-# Beschreibung: OpenWrt DIY Skript Teil 1 (wird vor Feed-Updates ausgeführt)
+# Beschreibung: OpenWrt DIY Skript Teil 1
 #
 
 echo "--- DIY Part 1: Skriptausführung gestartet ---"
@@ -35,9 +35,9 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
     curl -fL "$CUSTOM_DTS_URL" -o "$CUSTOM_DTS_TARGET" 2>/dev/null || true
     set_default_ip "192.168.9.1" "mt3600be"
 
-# --- Alle MT5000 Workflows (nutzen nativen GL.iNet Tree) ---
+# --- Alle MT5000 Workflows ---
 elif [[ "$WORKFLOW_NAME" == "GL-MT5000" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
-    echo ">>> Nativer GL.iNet MT5000 Quellbaum aktiv: Treiber bereits vorhanden <<<"
+    echo ">>> Nativer GL.iNet MT5000 Quellbaum aktiv: Treiber bereits nativ vorhanden <<<"
     set_default_ip "192.168.100.1" "$WORKFLOW_NAME"
 fi
 
