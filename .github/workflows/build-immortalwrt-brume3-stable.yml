@@ -104,6 +104,9 @@ jobs:
       id: compile
       run: |
         cd openwrt
+        # Neue Kconfig-Symbole des Kernels automatisch ohne interaktive Abfrage auflösen
+        make kernel_olddefconfig
+
         echo -e "$(nproc) Thread(s) beim Kompilieren"
         make -j$(nproc) || make -j1 V=s target/linux/compile
         echo "status=success" >> $GITHUB_OUTPUT
@@ -123,15 +126,15 @@ jobs:
       uses: actions/upload-artifact@v4
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       with:
-        name: OpenWrt_bin_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}
+        name: "OpenWrt_bin_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}"
         path: openwrt/bin
 
     - name: Firmware-Dateien als Artefakt hochladen
       uses: actions/upload-artifact@v4
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: OpenWrt_firmware_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}
-        path: ${{ env.FIRMWARE }}
+        name: "OpenWrt_firmware_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}"
+        path: "${{ env.FIRMWARE }}"
 
     - name: Release-Tag erstellen
       id: tag
