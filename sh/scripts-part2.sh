@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Dateiname: scripts-part2.sh
-# Beschreibung: OpenWrt DIY Skript Teil 2 (wird nach dem Aktualisieren der Feeds ausgeführt)
+# Beschreibung: OpenWrt DIY Skript Teil 2 (wird nach Feed-Updates ausgeführt)
 #
 
 TARGET_DIR="${PWD}/package/custom"
@@ -96,23 +96,14 @@ clone_custom_repos() {
 echo "--- DIY Part 2: Skriptausführung gestartet ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
 
-# Zirkuläre Abhängigkeiten bereinigen (wechat vs weechat-minimal / weechat-full)
+# Zirkuläre Kconfig-Abhängigkeiten bereinigen
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
-# GEMEINSAMES SETUP FÜR ALLE MT5000 WORKFLOWS
-if [[ "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
-    echo ">>> Konfiguriere Target, Device und Netzwerk für GL-MT5000 <<<"
+# --- SETUP FÜR ALLE MT5000 WORKFLOWS ---
+if [[ "$WORKFLOW_NAME" == "GL-MT5000" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
+    echo ">>> Konfiguriere Netzwerk, Cake & LuCI für GL-MT5000 <<<"
 
-    NETWORK_SETUP="target/linux/mediatek/filogic/base-files/etc/board.d/02_network"
-    if [ -f "$NETWORK_SETUP" ]; then
-        if ! grep -q "glinet,gl-mt5000" "$NETWORK_SETUP"; then
-            sed -i '/glinet,gl-mt6000)/i \
-glinet,gl-mt5000)\
-\tucidef_set_interfaces_lan_wan "lan1 lan2" "eth1"\
-\t;;' "$NETWORK_SETUP"
-        fi
-    fi
-
+    # Standard-Netzwerkkonfiguration für den Brume 3 (LAN: 192.168.100.1, WAN: DHCP auf eth1)
     mkdir -p package/base-files/files/etc/config
     cat << 'EOF' > package/base-files/files/etc/config/network
 config interface 'loopback'
@@ -135,30 +126,11 @@ config interface 'lan'
 
 config interface 'wan'
 	option device 'eth1'
-	option proto 'static'
-	option ipaddr '192.168.10.1'
-	option netmask '255.255.255.0'
+	option proto 'dhcp'
 EOF
 
-    # Lösche alle alten Target- und Device-Auswahlen aus .config
-    sed -i '/CONFIG_TARGET_/d' .config 2>/dev/null || true
-
+    # Paket-Zusatzoptionen für Speicher, Dateisysteme & SQM Cake
     cat << 'EOF' >> .config
-# --- Zielplattform & Exklusives GL-MT5000 Profil ---
-CONFIG_TARGET_mediatek=y
-CONFIG_TARGET_mediatek_filogic=y
-CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
-
-# --- Switch / DSA Treiber & Kernel-Builtins ---
-CONFIG_PACKAGE_kmod-dsa=y
-CONFIG_PACKAGE_kmod-dsa-realtek=y
-CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-CONFIG_NET_DSA_REALTEK=y
-CONFIG_NET_DSA_REALTEK_RTL8366UB=y
-CONFIG_NET_DSA_REALTEK_RTL8366RB=y
-CONFIG_NET_DSA_REALTEK_MDIO=y
-CONFIG_NET_DSA_REALTEK_SMI=y
-
 # --- USB Storage & Block Devices ---
 CONFIG_PACKAGE_kmod-usb-core=y
 CONFIG_PACKAGE_kmod-usb3=y
@@ -185,25 +157,13 @@ CONFIG_PACKAGE_kmod-sched-cake=y
 CONFIG_PACKAGE_kmod-sched-core=y
 CONFIG_PACKAGE_tc-tiny=y
 
-# --- LuCI Theme ---
+# --- LuCI & Themes ---
+CONFIG_PACKAGE_luci=y
 CONFIG_PACKAGE_luci-theme-footstrap=y
 EOF
 
+    # UCI-Default: Footstrap-Theme aktivieren
     mkdir -p package/base-files/files/etc/uci-defaults/
-    cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-gl-mt5000-wan-rescue
-uci -q batch << 'UCIBATCH'
-set firewall.wan_rescue=rule
-set firewall.wan_rescue.name='Allow-WAN-Access-Rescue'
-set firewall.wan_rescue.src='wan'
-set firewall.wan_rescue.proto='tcp'
-set firewall.wan_rescue.dest_port='22 80 443'
-set firewall.wan_rescue.target='ACCEPT'
-commit firewall
-UCIBATCH
-exit 0
-EOF
-    chmod +x package/base-files/files/etc/uci-defaults/99-gl-mt5000-wan-rescue
-
     cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 uci set luci.main.mediaurlbase='/luci-static/footstrap'
 uci commit luci
@@ -211,7 +171,7 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
-# STANDARD-ZWEIG FÜR ANDERE GERÄTE
+# --- STANDARD-ZWEIG FÜR ANDERE BOARDS ---
 else
     patch_rust_makefile
     reset_custom_package_dir
