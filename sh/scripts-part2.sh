@@ -96,13 +96,19 @@ clone_custom_repos() {
 echo "--- DIY Part 2: Skriptausführung gestartet ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
 
-# Alle kollidierenden Pakete entfernen, die Kconfig-Rekursionen auslösen
+# 1. ZUERST ALLE PAKETE LADEN UND ABHÄNGIGKEITEN KLÄREN (FÜR ALLE WORKFLOWS)
+patch_rust_makefile
+reset_custom_package_dir
+remove_conflicting_makefiles
+clone_custom_repos
+
+# Kollidierende Standard-Pakete entfernen
 rm -rf feeds/packages/net/openvswitch package/feeds/packages/openvswitch 2>/dev/null || true
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
-# --- SETUP FÜR ALLE MT5000 WORKFLOWS ---
+# 2. MT5000 SPEZIFISCHE KONFIGURATIONEN & BRANDING
 if [[ "$WORKFLOW_NAME" == "GL-MT5000" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
-    echo ">>> Konfiguriere Netzwerk, Cake & LuCI für GL-MT5000 <<<"
+    echo ">>> Konfiguriere Netzwerk & Basis für GL-MT5000 <<<"
 
     mkdir -p package/base-files/files/etc/config
     cat << 'EOF' > package/base-files/files/etc/config/network
@@ -129,38 +135,6 @@ config interface 'wan'
 	option proto 'dhcp'
 EOF
 
-    cat << 'EOF' >> .config
-# --- USB Storage & Block Devices ---
-CONFIG_PACKAGE_kmod-usb-core=y
-CONFIG_PACKAGE_kmod-usb3=y
-CONFIG_PACKAGE_kmod-usb-storage=y
-CONFIG_PACKAGE_kmod-usb-storage-uas=y
-CONFIG_PACKAGE_kmod-scsi-core=y
-CONFIG_PACKAGE_block-mount=y
-CONFIG_PACKAGE_e2fsprogs=y
-CONFIG_PACKAGE_f2fs-tools=y
-CONFIG_PACKAGE_dosfstools=y
-
-# --- Dateisysteme ---
-CONFIG_PACKAGE_kmod-fs-ext4=y
-CONFIG_PACKAGE_kmod-fs-f2fs=y
-CONFIG_PACKAGE_kmod-fs-vfat=y
-CONFIG_PACKAGE_kmod-nls-cp437=y
-CONFIG_PACKAGE_kmod-nls-iso8859-1=y
-CONFIG_PACKAGE_kmod-nls-utf8=y
-
-# --- SQM QoS mit Cake ---
-CONFIG_PACKAGE_sqm-scripts=y
-CONFIG_PACKAGE_luci-app-sqm=y
-CONFIG_PACKAGE_kmod-sched-cake=y
-CONFIG_PACKAGE_kmod-sched-core=y
-CONFIG_PACKAGE_tc-tiny=y
-
-# --- LuCI & Themes ---
-CONFIG_PACKAGE_luci=y
-CONFIG_PACKAGE_luci-theme-footstrap=y
-EOF
-
     mkdir -p package/base-files/files/etc/uci-defaults/
     cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 uci set luci.main.mediaurlbase='/luci-static/footstrap'
@@ -173,12 +147,10 @@ EOF
     if [[ "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" ]]; then
         echo ">>> Setze ImmortalWrt Identität & Banner <<<"
         
-        # 1. Systemvariablen für LuCI und Konsole anpassen
         sed -i 's/VERSION_DIST:=OpenWrt/VERSION_DIST:=ImmortalWrt/g' include/version.mk 2>/dev/null || true
         sed -i 's/VERSION_MANUFACTURER:=OpenWrt/VERSION_MANUFACTURER:=ImmortalWrt/g' include/version.mk 2>/dev/null || true
         sed -i 's/OpenWrt /ImmortalWrt /g' package/base-files/files/bin/config_generate 2>/dev/null || true
         
-        # 2. Terminal-Banner überschreiben
         cat << 'EOF' > package/base-files/files/etc/banner
   _____                               _         _ __          __      _   
  |_   _|                             | |       | |\ \        / /     | |  
@@ -191,12 +163,6 @@ EOF
  --------------------------------------------------------------------------
 EOF
     fi
-
-else
-    patch_rust_makefile
-    reset_custom_package_dir
-    remove_conflicting_makefiles
-    clone_custom_repos
 fi
 
 echo "--- DIY Part 2: Skriptausführung beendet ---"
