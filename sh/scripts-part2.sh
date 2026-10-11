@@ -35,7 +35,6 @@ declare -A REPOS=(
     ["https://github.com/Slava-Shchipunov/awg-openwrt"]=""
     ["https://github.com/QiuSimons/luci-app-daed"]=""
     ["https://github.com/sirpdboy/luci-app-ddns-go.git"]=""
-    ["https://github.com/tty228/luci-app-wechatpush.git"]=""
     ["https://github.com/gaoderby/luci-app-kms.git"]=""
     ["https://github.com/sbwml/luci-app-ramfree.git"]=""
     ["https://github.com/lisaac/luci-app-diskman"]=""
@@ -96,6 +95,9 @@ clone_custom_repos() {
 
 echo "--- DIY Part 2: Skriptausführung gestartet ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
+
+# Zirkuläre Abhängigkeiten bereinigen (wechat vs weechat-minimal / weechat-full)
+rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
 # GEMEINSAMES SETUP FÜR ALLE MT5000 WORKFLOWS
 if [[ "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
