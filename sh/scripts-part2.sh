@@ -169,6 +169,29 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
+    # --- BRANDING NUR FÜR IMMORTALWRT WORKFLOWS ---
+    if [[ "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" ]]; then
+        echo ">>> Setze ImmortalWrt Identität & Banner <<<"
+        
+        # 1. Systemvariablen für LuCI und Konsole anpassen
+        sed -i 's/VERSION_DIST:=OpenWrt/VERSION_DIST:=ImmortalWrt/g' include/version.mk 2>/dev/null || true
+        sed -i 's/VERSION_MANUFACTURER:=OpenWrt/VERSION_MANUFACTURER:=ImmortalWrt/g' include/version.mk 2>/dev/null || true
+        sed -i 's/OpenWrt /ImmortalWrt /g' package/base-files/files/bin/config_generate 2>/dev/null || true
+        
+        # 2. Terminal-Banner überschreiben
+        cat << 'EOF' > package/base-files/files/etc/banner
+  _____                               _         _ __          __      _   
+ |_   _|                             | |       | |\ \        / /     | |  
+   | |  _ __ ___  _ __ ___   ___  _ __| |_  __ _| | \ \  /\  / /_ __  | |_ 
+   | | | '_ ` _ \| '_ ` _ \ / _ \| '__| __|/ _` | |  \ \/  \/ /| '__| | __|
+  _| |_| | | | | | | | | | | (_) | |  | |_| (_| | |   \  /\  / | |    | |_ 
+ |_____|_| |_| |_|_| |_| |_|\___/|_|   \__|\__,_|_|    \/  \/  |_|     \__|
+ --------------------------------------------------------------------------
+ ImmortalWrt GL-MT5000 (Brume 3)
+ --------------------------------------------------------------------------
+EOF
+    fi
+
 else
     patch_rust_makefile
     reset_custom_package_dir
