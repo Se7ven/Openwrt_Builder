@@ -67,7 +67,9 @@ jobs:
           ./scripts/feeds update -a
 
       - name: Feeds installieren
-        run: cd openwrt && ./scripts/feeds install -a
+        run: |
+          cd openwrt
+          ./scripts/feeds install -a
 
       - name: Benutzerdefinierte Konfiguration anwenden und DSA-Treiber injizieren
         run: |
@@ -76,20 +78,19 @@ jobs:
           cd openwrt
           $GITHUB_WORKSPACE/$DIY_P2_SH
 
-          cat >> .config << 'EOF'
-          CONFIG_TARGET_mediatek=y
-          CONFIG_TARGET_mediatek_filogic=y
-          CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
-          CONFIG_PACKAGE_kmod-dsa=y
-          CONFIG_PACKAGE_kmod-dsa-realtek=y
-          CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-          CONFIG_NET_DSA_REALTEK=y
-          CONFIG_NET_DSA_REALTEK_RTL8366UB=y
-          CONFIG_NET_DSA_REALTEK_RTL8366RB=y
-          CONFIG_NET_DSA_REALTEK_MDIO=y
-          CONFIG_NET_DSA_REALTEK_SMI=y
-          EOF
+          echo "CONFIG_TARGET_mediatek=y" >> .config
+          echo "CONFIG_TARGET_mediatek_filogic=y" >> .config
+          echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-dsa=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-dsa-realtek=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK_RTL8366UB=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK_RTL8366RB=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK_MDIO=y" >> .config
+          echo "CONFIG_NET_DSA_REALTEK_SMI=y" >> .config
 
+          rm -rf tmp/.config* tmp/.targetinfo
           make defconfig
 
           echo "=== Überprüfe gewähltes Target-Gerät ==="
@@ -126,15 +127,15 @@ jobs:
         uses: actions/upload-artifact@v4
         if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
         with:
-          name: "OpenWrt_bin_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}"
+          name: OpenWrt_bin_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}
           path: openwrt/bin
 
       - name: Firmware-Dateien als Artefakt hochladen
         uses: actions/upload-artifact@v4
         if: steps.organize.outputs.status == 'success' && !cancelled()
         with:
-          name: "OpenWrt_firmware_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}"
-          path: "${{ env.FIRMWARE }}"
+          name: OpenWrt_firmware_${{ env.DEVICE_TARGET }}_${{ env.DEVICE_SUBTARGET }}_${{ env.FILE_DATE }}
+          path: ${{ env.FIRMWARE }}
 
       - name: Release-Tag erstellen
         id: tag
@@ -154,3 +155,4 @@ jobs:
           tag_name: ${{ steps.tag.outputs.release_tag }}
           body_path: release.txt
           files: ${{ env.FIRMWARE }}/*
+          
