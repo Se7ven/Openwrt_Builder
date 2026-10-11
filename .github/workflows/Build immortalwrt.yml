@@ -54,7 +54,7 @@ jobs:
           echo "WORKFLOW_NAME=gl-mt5000_immortalwrt" >> $GITHUB_ENV
           INPUT_TAG2="${{ github.event.inputs.tag2 }}"
           [ -z "$INPUT_TAG2" ] && INPUT_TAG2="master"
-          echo "TAG2=$INPUT_TAG2" \vert{} tr ' ' '_' >> $GITHUB_ENV
+          echo "TAG2=$INPUT_TAG2" | tr ' ' '_' >> $GITHUB_ENV
 
       - name: Quellcode klonen
         working-directory: /workdir
@@ -76,21 +76,25 @@ jobs:
 
       - name: Konfiguration anwenden und DIY 2 ausführen
         run: |
-          [ -e $DEFAULT_SETTING ] && mv$DEFAULT_SETTING openwrt/package/default-settings-m0eak
-          [ -e files ] && mv ./files openwrt/files
-          [ -e ./config/immortalwrt.config ] && cp ./config/immortalwrt.config openwrt/.config
+          [ -e "$DEFAULT_SETTING" ] && mv "$DEFAULT_SETTING" openwrt/package/default-settings-m0eak || true
+          [ -e files ] && mv ./files openwrt/files || true
+          [ -e ./config/immortalwrt.config ] && cp ./config/immortalwrt.config openwrt/.config || true
           if [ "${{ github.event.inputs.docker }}" = "true" ] && [ -e $CONFIG_FILE_DOCKER ]; then
             cat $CONFIG_FILE_DOCKER >> openwrt/.config
           fi
-          [ -f $DIY_P2_SH ] && chmod +x$DIY_P2_SH
+          [ -f $DIY_P2_SH ] && chmod +x $DIY_P2_SH
           cd openwrt
           [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
+
+          # Vorhandene Devices deaktivieren und MT5000 erzwingen
+          sed -i '/CONFIG_TARGET_DEVICE_/d' .config 2>/dev/null || true
           echo "CONFIG_TARGET_mediatek=y" >> .config
           echo "CONFIG_TARGET_mediatek_filogic=y" >> .config
           echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y" >> .config
+          echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_gl-mt5000=y" >> .config
           make defconfig
           echo "=== Überprüfe gewähltes Target-Gerät ==="
-          grep "^CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
+          grep "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
 
       - name: Paketquellen herunterladen
         run: |
@@ -103,11 +107,11 @@ jobs:
         run: |
           cd openwrt
           echo "$(nproc) Thread(s) beim Kompilieren"
-          yes "" | make -j$(nproc) || make -j1 V=s target/linux/compile
-          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+          yes "" | make -j$(nproc) target/linux/compile || make -j1 V=s target/linux/compile
+          make -j$(nproc) target/linux/install PROFILE=glinet_gl-mt5000 || make -j$(nproc) target/linux/install PROFILE=gl-mt5000 || make -j$(nproc)
           echo "compile=success" >> $GITHUB_OUTPUT
-          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
-          echo "file-date=$(date +"\%Y\%m\%d\%H\%M")" >> $GITHUB_OUTPUT
+          echo "device-name=gl-mt5000" >> $GITHUB_OUTPUT
+          echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
       - name: bin-Verzeichnis als Artefakt hochladen
         uses: actions/upload-artifact@v4
@@ -121,5 +125,11 @@ jobs:
         if: steps.compile.outputs.compile == 'success' && !cancelled()
         with:
           name: ImmortalWrt Brume 3 (GL-MT5000) Master ${{ steps.compile.outputs.file-date }}
-          tag_name: ImmortalWrt_GL
-          
+          tag_name: ImmortalWrt_GL-MT5000_master_${{ steps.compile.outputs.file-date }}
+          body: ImmortalWrt Master Feeds auf nativem GL-MT5000 Quellbaum.
+          files: |
+            openwrt/bin/targets/*/*/*sysupgrade*
+            openwrt/bin/targets/*/*/*factory*
+            openwrt/bin/targets/*/*/*manifest*
+            openwrt/bin/targets/*/*/*sha256sums
+            
