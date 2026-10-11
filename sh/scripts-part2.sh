@@ -96,7 +96,8 @@ clone_custom_repos() {
 echo "--- DIY Part 2: Skriptausführung gestartet ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
 
-# Zirkuläre Kconfig-Abhängigkeiten bereinigen
+# Alle kollidierenden Pakete entfernen, die Kconfig-Rekursionen auslösen
+rm -rf feeds/packages/net/openvswitch package/feeds/packages/openvswitch 2>/dev/null || true
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
 # --- SETUP FÜR ALLE MT5000 WORKFLOWS ---
@@ -168,7 +169,6 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
-# --- STANDARD-ZWEIG FÜR ANDERE BOARDS ---
 else
     patch_rust_makefile
     reset_custom_package_dir
