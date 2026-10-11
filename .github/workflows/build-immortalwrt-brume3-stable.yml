@@ -9,7 +9,7 @@ permissions:
 env:
   WORKFLOW_NAME: "Immortalwrt Brume 3 stable"
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: ./config/mt5000.config
+  CONFIG_FILE: ./config/immortalwrt.config
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
   UPLOAD_BIN_DIR: false
