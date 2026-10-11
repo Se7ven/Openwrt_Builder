@@ -97,14 +97,16 @@ jobs:
         [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
 
         # Reale Kernel- & DSA-Symbole für Realtek RTL8366UB via MDIO erzwingen
-        echo "CONFIG_PACKAGE_kmod-dsa=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-dsa-realtek=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y" >> .config
-        echo "CONFIG_NET_DSA_REALTEK=y" >> .config
-        echo "CONFIG_NET_DSA_REALTEK_RTL8366UB=y" >> .config
-        echo "CONFIG_NET_DSA_REALTEK_RTL8366RB=y" >> .config
-        echo "CONFIG_NET_DSA_REALTEK_MDIO=y" >> .config
-        echo "CONFIG_NET_DSA_REALTEK_SMI=y" >> .config
+        cat >> .config << 'EOF'
+        CONFIG_PACKAGE_kmod-dsa=y
+        CONFIG_PACKAGE_kmod-dsa-realtek=y
+        CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
+        CONFIG_NET_DSA_REALTEK=y
+        CONFIG_NET_DSA_REALTEK_RTL8366UB=y
+        CONFIG_NET_DSA_REALTEK_RTL8366RB=y
+        CONFIG_NET_DSA_REALTEK_MDIO=y
+        CONFIG_NET_DSA_REALTEK_SMI=y
+        EOF
 
         make defconfig
 
@@ -143,7 +145,7 @@ jobs:
         name: ImmortalWrt Brume 3 (GL-MT5000) ${{ steps.compile.outputs.file-date }}
         tag_name: ImmortalWrt_GL-MT5000_${{ steps.compile.outputs.file-date }}
         body: |
-          ImmortalWrt Build für GL.iNet MT5000 mit integriertem RTL8366UB DSA-Treiber (MDIO) und USB-Storage Support.
+          ImmortalWrt Master Build für GL.iNet MT5000 mit integriertem RTL8366UB DSA-Treiber (MDIO) und USB-Storage Support.
         files: |
           openwrt/bin/targets/*/*/*sysupgrade*
           openwrt/bin/targets/*/*/*factory*
