@@ -7,25 +7,20 @@ on:
         description: 'Docker einbinden'
         required: false
         default: 'false'
-      tag2:
-        description: 'ImmortalWrt Version/Tag'
-        required: false
-        default: 'master'
 
 permissions:
   contents: write
 
 env:
   FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: ./config/mt5000.config
   CONFIG_FILE_DOCKER: ./config/docker.config
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
-  DEFAULT_SETTING: ./default-settings-m0eak
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
   TZ: Europe/Berlin
-  GOTOOLCHAIN: auto
 
 jobs:
   build:
@@ -52,9 +47,6 @@ jobs:
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
           echo "WORKFLOW_NAME=gl-mt5000_immortalwrt" >> $GITHUB_ENV
-          INPUT_TAG2="${{ github.event.inputs.tag2 }}"
-          [ -z "$INPUT_TAG2" ] && INPUT_TAG2="master"
-          echo "TAG2=$INPUT_TAG2" | tr ' ' '_' >> $GITHUB_ENV
 
       - name: Quellcode klonen
         working-directory: /workdir
@@ -76,24 +68,17 @@ jobs:
 
       - name: Konfiguration anwenden und DIY 2 ausführen
         run: |
-          [ -e "$DEFAULT_SETTING" ] && mv "$DEFAULT_SETTING" openwrt/package/default-settings-m0eak || true
-          [ -e files ] && mv ./files openwrt/files || true
-          [ -e ./config/immortalwrt.config ] && cp ./config/immortalwrt.config openwrt/.config || true
+          [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
           if [ "${{ github.event.inputs.docker }}" = "true" ] && [ -e $CONFIG_FILE_DOCKER ]; then
             cat $CONFIG_FILE_DOCKER >> openwrt/.config
           fi
           [ -f $DIY_P2_SH ] && chmod +x $DIY_P2_SH
           cd openwrt
-          [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
+          $GITHUB_WORKSPACE/$DIY_P2_SH
 
-          sed -i '/CONFIG_TARGET_DEVICE_/d' .config 2>/dev/null || true
-          echo "CONFIG_TARGET_mediatek=y" >> .config
-          echo "CONFIG_TARGET_mediatek_filogic=y" >> .config
-          echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y" >> .config
-          echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_gl-mt5000=y" >> .config
           make defconfig
           echo "=== Überprüfe gewähltes Target-Gerät ==="
-          grep "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
+          grep "CONFIG_TARGET.*DEVICE.*=y" .config || true
 
       - name: Paketquellen herunterladen
         run: |
@@ -106,8 +91,6 @@ jobs:
         run: |
           cd openwrt
           echo "$(nproc) Thread(s) beim Kompilieren"
-          make -j$(nproc) tools/compile || make -j1 V=s tools/compile
-          make -j$(nproc) toolchain/compile || make -j1 V=s toolchain/compile
           make -j$(nproc) || make -j1 V=s
           grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
           echo "compile=success" >> $GITHUB_OUTPUT
@@ -127,7 +110,7 @@ jobs:
         with:
           name: ImmortalWrt Brume 3 (GL-MT5000) Master ${{ steps.compile.outputs.file-date }}
           tag_name: ImmortalWrt_GL-MT5000_master_${{ steps.compile.outputs.file-date }}
-          body: ImmortalWrt Master Feeds auf nativem GL-MT5000 Quellbaum.
+          body: ImmortalWrt Master Feeds auf nativer mt5000 Konfiguration.
           files: |
             openwrt/bin/targets/*/*/*sysupgrade*
             openwrt/bin/targets/*/*/*factory*
