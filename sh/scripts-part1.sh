@@ -1,12 +1,11 @@
 #!/bin/bash
 #
 # Dateiname: scripts-part1.sh
-# Beschreibung: OpenWrt DIY Skript Teil 1 (wird vor dem Aktualisieren der Feeds ausgeführt)
+# Beschreibung: OpenWrt DIY Skript Teil 1 (wird vor Feed-Updates ausgeführt)
 #
 
 echo "--- DIY Part 1: Skriptausführung gestartet ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
-echo "TAG2: $TAG2"
 echo "------------------------------------------"
 
 set_default_ip() {
@@ -28,11 +27,7 @@ if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; the
     rm -f package/kernel/mac80211/patches/nss/subsys/999-775-wifi-mac80211-Changes-for-WDS-MLD.patch
 
 elif [[ "$WORKFLOW_NAME" == "x86_immortalwrt" ]]; then
-    VERSION2=${TAG2#v}
     set_default_ip "192.168.100.1" "x86"
-    if [ -n "$VERSION2" ]; then
-        sed -i "s/replace/$VERSION2/g" files/etc/uci-defaults/zzz_m0eak 2>/dev/null || true
-    fi
 
 elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
     CUSTOM_DTS_URL="https://raw.githubusercontent.com/openwrt/openwrt/cced8d95f3caa9f48eaeb4ef2d15426d20afaf16/target/linux/mediatek/dts/mt7987a-glinet-gl-mt3600be.dts"
@@ -40,112 +35,9 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
     curl -fL "$CUSTOM_DTS_URL" -o "$CUSTOM_DTS_TARGET" 2>/dev/null || true
     set_default_ip "192.168.9.1" "mt3600be"
 
-# 1. ORIGINALE GL.iNet PIPELINE (Build filogic.yml -> workflow_name: GL-MT5000)
-elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
-    echo ">>> Workflow GL-MT5000 (Filogic Quellbaum) aktiv. Basis-Setup ohne Injektion <<<"
-    set_default_ip "192.168.100.1" "GL-MT5000-native"
-
-# 2. STANDALONE WORKFLOWS (ImmortalWrt Master/25.12 & OpenWrt 25.12)
-elif [[ "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Build immortalwrt" ]]; then
-    echo ">>> Workflow: $WORKFLOW_NAME -> Führe GL.iNet Treiber- und Device-Injektion durch <<<"
-
-    GL_TMP_DIR="/tmp/glinet_mt5000_source"
-    rm -rf "$GL_TMP_DIR"
-    git clone --depth 1 -b mt5000 https://github.com/GLiNet-Tech/openwrt.git "$GL_TMP_DIR"
-
-    if [[ -d "$GL_TMP_DIR" ]]; then
-        # 1. DTS-Dateien in alle relevanten Quellpfade kopieren
-        mkdir -p target/linux/mediatek/dts target/linux/mediatek/files/arch/arm64/boot/dts/mediatek
-        cp -f "$GL_TMP_DIR"/target/linux/mediatek/dts/*gl-mt5000* target/linux/mediatek/dts/ 2>/dev/null || true
-        cp -f "$GL_TMP_DIR"/target/linux/mediatek/files/arch/arm64/boot/dts/mediatek/*gl-mt5000* target/linux/mediatek/files/arch/arm64/boot/dts/mediatek/ 2>/dev/null || true
-
-        # Falls DTS als mt7981 oder mt7987 benannt ist, passenden Alias sicherstellen
-        find target/linux/mediatek/ -name "*gl-mt5000*.dts*" -exec cp -f {} target/linux/mediatek/dts/mt7987a-glinet-gl-mt5000.dts \; 2>/dev/null || true
-
-        # 2. Base-Files und Board-Erkennung übertragen
-        mkdir -p target/linux/mediatek/filogic/base-files
-        cp -rf "$GL_TMP_DIR"/target/linux/mediatek/filogic/base-files/* target/linux/mediatek/filogic/base-files/ 2>/dev/null || true
-
-        # 3. Gerätedefinition für GL-MT5000 verbindlich in filogic.mk anlegen
-        sed -i '/define Device\/glinet_gl-mt5000/,/endef/d' target/linux/mediatek/image/filogic.mk 2>/dev/null || true
-        sed -i '/TARGET_DEVICES += glinet_gl-mt5000/d' target/linux/mediatek/image/filogic.mk 2>/dev/null || true
-
-        cat << 'EOF' >> target/linux/mediatek/image/filogic.mk
-
-define Device/glinet_gl-mt5000
-  DEVICE_VENDOR := GL.iNet
-  DEVICE_MODEL := GL-MT5000
-  DEVICE_DTS := mt7987a-glinet-gl-mt5000
-  DEVICE_PACKAGES := kmod-fs-f2fs f2fs-tools e2fsprogs losetup
-  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-endef
-TARGET_DEVICES += glinet_gl-mt5000
-EOF
-
-        # 4. RTL8366UB & MDIO Treiberdateien in das Kernel-Files-Verzeichnis spiegeln
-        mkdir -p target/linux/generic/files/drivers/net/dsa/realtek
-        find "$GL_TMP_DIR" -type f \( -name "*rtl8366*" -o -name "*realtek*" \) -path "*/drivers/net/dsa/*" \
-            -exec cp -f {} target/linux/generic/files/drivers/net/dsa/realtek/ \; 2>/dev/null || true
-
-        # 4b. Patches für Realtek MDIO/UB einspielen
-        GL_PATCH_DIR=$(find "$GL_TMP_DIR"/target/linux/mediatek/ -maxdepth 1 -type d -name "patches-*" 2>/dev/null | head -n 1)
-        if [ -n "$GL_PATCH_DIR" ] && [ -d "$GL_PATCH_DIR" ]; then
-            for pdir in target/linux/mediatek/patches-*; do
-                if [ -d "$pdir" ]; then
-                    echo "Kopiere Realtek-Patches aus $GL_PATCH_DIR nach $pdir"
-                    cp -f "$GL_PATCH_DIR"/*rtl8366* "$pdir"/ 2>/dev/null || true
-                    cp -f "$GL_PATCH_DIR"/*realtek* "$pdir"/ 2>/dev/null || true
-                fi
-            done
-        fi
-
-        # 5. Kernel-Flags direkt in die Kernel-Konfigurationsdateien schreiben
-        for cfg in target/linux/mediatek/filogic/config-* target/linux/mediatek/config-*; do
-            if [ -f "$cfg" ]; then
-                sed -i '/CONFIG_NET_DSA_REALTEK/d' "$cfg"
-                sed -i '/CONFIG_FIXED_PHY/d' "$cfg"
-                cat << 'EOF' >> "$cfg"
-CONFIG_NET_DSA=y
-CONFIG_NET_DSA_TAG_RTL4_A=y
-CONFIG_NET_DSA_TAG_NONE=y
-CONFIG_NET_DSA_REALTEK=y
-CONFIG_NET_DSA_REALTEK_RTL8366UB=y
-CONFIG_NET_DSA_REALTEK_RTL8366RB=y
-CONFIG_NET_DSA_REALTEK_SMI=y
-CONFIG_NET_DSA_REALTEK_MDIO=y
-CONFIG_FIXED_PHY=y
-CONFIG_USB_NET_DRIVERS=y
-CONFIG_USB_RTL8152=y
-CONFIG_USB_NET_CDC_NCM=y
-CONFIG_NET_DSA_AN8855=n
-CONFIG_NET_DSA_BCM_SF2=n
-CONFIG_NET_DSA_LOOP=n
-CONFIG_NET_DSA_HIRSCHMANN_HELLCREEK=n
-CONFIG_NET_DSA_MICROCHIP_KSZ9477=n
-CONFIG_NET_DSA_MICROCHIP_KSZ8795=n
-CONFIG_NET_DSA_MV88E6060=n
-CONFIG_NET_DSA_MV88E6XXX=n
-CONFIG_NET_DSA_AR9331=n
-CONFIG_NET_DSA_SJA1105=n
-CONFIG_NET_DSA_XRS700X=n
-CONFIG_NET_DSA_QCA8K=n
-CONFIG_NET_DSA_REALTEK_RTL8365MB=n
-CONFIG_NET_DSA_SMSC_LAN9303=n
-CONFIG_NET_DSA_VITESSE_VSC73XX=n
-EOF
-            fi
-        done
-
-        rm -rf "$GL_TMP_DIR"
-    fi
-
-    # Menübaum-Cache sofort leeren, damit das neue Device registriert wird
-    rm -rf tmp/.config* tmp/.targetinfo tmp/.packageinfo
-
-    if ! grep -q "luci-theme-footstrap" feeds.conf.default 2>/dev/null; then
-        echo "src-git footstrap https://github.com/VizzleTF/luci-theme-footstrap.git" >> "feeds.conf.default"
-    fi
-
+# --- Alle MT5000 Workflows (nutzen nativen GL.iNet Tree) ---
+elif [[ "$WORKFLOW_NAME" == "GL-MT5000" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
+    echo ">>> Nativer GL.iNet MT5000 Quellbaum aktiv: Treiber bereits vorhanden <<<"
     set_default_ip "192.168.100.1" "$WORKFLOW_NAME"
 fi
 
