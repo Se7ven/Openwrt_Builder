@@ -46,7 +46,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo -E apt-get update
-          sudo -E apt-get -y install dos2unix libfuse-dev
+          sudo -E apt-get -y install dos2unix libfuse-dev build-essential libncurses5-dev gawk git libssl-dev gettext zlib1g-dev swig python3-distutils libelf-dev m4 flex bison
           sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo timedatectl set-timezone "$TZ"
           sudo mkdir -p /workdir
@@ -86,7 +86,6 @@ jobs:
           cd openwrt
           [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
 
-          # Vorhandene Devices deaktivieren und MT5000 erzwingen
           sed -i '/CONFIG_TARGET_DEVICE_/d' .config 2>/dev/null || true
           echo "CONFIG_TARGET_mediatek=y" >> .config
           echo "CONFIG_TARGET_mediatek_filogic=y" >> .config
@@ -107,10 +106,12 @@ jobs:
         run: |
           cd openwrt
           echo "$(nproc) Thread(s) beim Kompilieren"
-          yes "" | make -j$(nproc) target/linux/compile || make -j1 V=s target/linux/compile
-          make -j$(nproc) target/linux/install PROFILE=glinet_gl-mt5000 || make -j$(nproc) target/linux/install PROFILE=gl-mt5000 || make -j$(nproc)
+          make -j$(nproc) tools/compile || make -j1 V=s tools/compile
+          make -j$(nproc) toolchain/compile || make -j1 V=s toolchain/compile
+          make -j$(nproc) || make -j1 V=s
+          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
           echo "compile=success" >> $GITHUB_OUTPUT
-          echo "device-name=gl-mt5000" >> $GITHUB_OUTPUT
+          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
           echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
       - name: bin-Verzeichnis als Artefakt hochladen
