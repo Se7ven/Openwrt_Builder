@@ -42,116 +42,116 @@ jobs:
             workflow_name: gl-mt5000_immortalwrt
 
     steps:
-    - name: Repository auschecken
-      uses: actions/checkout@v4
+      - name: Repository auschecken
+        uses: actions/checkout@v4
 
-    - name: Speicherplatz freigeben
-      run: |
-        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-        sudo docker image prune --all --force
+      - name: Speicherplatz freigeben
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
 
-    - name: Build-Umgebung initialisieren
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        sudo -E apt-get update
-        sudo -E apt-get -y install dos2unix libfuse-dev
-        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-        sudo timedatectl set-timezone "$TZ"
-        sudo mkdir -p /workdir
-        sudo chown $USER:$GROUPS /workdir
-        echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
-        INPUT_TAG2="${{ github.event.inputs.tag2 }}"
-        [ -z "$INPUT_TAG2" ] && INPUT_TAG2="master"
-        echo "TAG2=$INPUT_TAG2" | tr ' ' '_' >> $GITHUB_ENV
+      - name: Build-Umgebung initialisieren
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt-get update
+          sudo -E apt-get -y install dos2unix libfuse-dev
+          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo timedatectl set-timezone "$TZ"
+          sudo mkdir -p /workdir
+          sudo chown $USER:$GROUPS /workdir
+          echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
+          INPUT_TAG2="${{ github.event.inputs.tag2 }}"
+          [ -z "$INPUT_TAG2" ] && INPUT_TAG2="master"
+          echo "TAG2=$INPUT_TAG2" | tr ' ' '_' >> $GITHUB_ENV
 
-    - name: Quellcode klonen
-      working-directory: /workdir
-      run: |
-        git clone ${{ matrix.repo_url }} --single-branch -b ${{ matrix.repo_branch }} openwrt
-        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+      - name: Quellcode klonen
+        working-directory: /workdir
+        run: |
+          git clone ${{ matrix.repo_url }} --single-branch -b ${{ matrix.repo_branch }} openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
-    - name: Feeds laden und DIY-Skript Teil 1 ausführen
-      run: |
-        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
-        [ -f $DIY_P1_SH ] && chmod +x $DIY_P1_SH
-        cd openwrt
-        sed -i 's/.*video/#&/' feeds.conf.default || true
-        [ -f $GITHUB_WORKSPACE/$DIY_P1_SH ] && $GITHUB_WORKSPACE/$DIY_P1_SH || true
-        ./scripts/feeds update -a
+      - name: Feeds laden und DIY-Skript Teil 1 ausführen
+        run: |
+          [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+          [ -f $DIY_P1_SH ] && chmod +x $DIY_P1_SH
+          cd openwrt
+          sed -i 's/.*video/#&/' feeds.conf.default || true
+          [ -f $GITHUB_WORKSPACE/$DIY_P1_SH ] && $GITHUB_WORKSPACE/$DIY_P1_SH || true
+          ./scripts/feeds update -a
 
-    - name: Feeds installieren
-      run: cd openwrt && ./scripts/feeds install -a
+      - name: Feeds installieren
+        run: cd openwrt && ./scripts/feeds install -a
 
-    - name: Benutzerdefinierte Konfiguration anwenden und DIY-Skript Teil 2 ausführen
-      run: |
-        [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
-        [ -e files ] && mv ./files openwrt/files
-        [ -e ${{ matrix.config_file }} ] && mv ${{ matrix.config_file }} openwrt/.config
-        if [ "${{ github.event.inputs.docker }}" = "true" ] && [ -e $CONFIG_FILE_DOCKER ]; then
-          cat $CONFIG_FILE_DOCKER >> openwrt/.config
-        fi
+      - name: Benutzerdefinierte Konfiguration anwenden und DIY-Skript Teil 2 ausführen
+        run: |
+          [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
+          [ -e files ] && mv ./files openwrt/files
+          [ -e ${{ matrix.config_file }} ] && mv ${{ matrix.config_file }} openwrt/.config
+          if [ "${{ github.event.inputs.docker }}" = "true" ] && [ -e $CONFIG_FILE_DOCKER ]; then
+            cat $CONFIG_FILE_DOCKER >> openwrt/.config
+          fi
 
-        [ -f $DIY_P2_SH ] && chmod +x $DIY_P2_SH
-        cd openwrt
-        [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
+          [ -f $DIY_P2_SH ] && chmod +x $DIY_P2_SH
+          cd openwrt
+          [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
 
-        # MT5000 Target-Profil und DSA-Treiber verbindlich festschreiben
-        cat >> .config << 'EOF'
-CONFIG_TARGET_mediatek=y
-CONFIG_TARGET_mediatek_filogic=y
-CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
-CONFIG_PACKAGE_kmod-dsa=y
-CONFIG_PACKAGE_kmod-dsa-realtek=y
-CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-CONFIG_NET_DSA_REALTEK=y
-CONFIG_NET_DSA_REALTEK_RTL8366UB=y
-CONFIG_NET_DSA_REALTEK_RTL8366RB=y
-CONFIG_NET_DSA_REALTEK_MDIO=y
-CONFIG_NET_DSA_REALTEK_SMI=y
-EOF
+          # MT5000 Target-Profil und DSA-Treiber verbindlich festschreiben
+          cat >> .config << 'EOF'
+          CONFIG_TARGET_mediatek=y
+          CONFIG_TARGET_mediatek_filogic=y
+          CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
+          CONFIG_PACKAGE_kmod-dsa=y
+          CONFIG_PACKAGE_kmod-dsa-realtek=y
+          CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
+          CONFIG_NET_DSA_REALTEK=y
+          CONFIG_NET_DSA_REALTEK_RTL8366UB=y
+          CONFIG_NET_DSA_REALTEK_RTL8366RB=y
+          CONFIG_NET_DSA_REALTEK_MDIO=y
+          CONFIG_NET_DSA_REALTEK_SMI=y
+          EOF
 
-        make defconfig
+          make defconfig
 
-        echo "=== Überprüfe gewähltes Target-Gerät ==="
-        grep "^CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
+          echo "=== Überprüfe gewähltes Target-Gerät ==="
+          grep "^CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
 
-    - name: Paketquellen herunterladen (make download)
-      id: package
-      run: |
-        cd openwrt
-        make download -j8
-        find dl -size -1024c -exec rm -f {} \;
+      - name: Paketquellen herunterladen (make download)
+        id: package
+        run: |
+          cd openwrt
+          make download -j8
+          find dl -size -1024c -exec rm -f {} \;
 
-    - name: Firmware kompilieren
-      id: compile
-      run: |
-        cd openwrt
-        echo -e "$(nproc) Thread(s) beim Kompilieren"
-        yes "" | make -j$(nproc) || make -j1 V=s target/linux/compile
-        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
-        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-        echo "compile=success" >> $GITHUB_OUTPUT
-        echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
-        echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
+      - name: Firmware kompilieren
+        id: compile
+        run: |
+          cd openwrt
+          echo -e "$(nproc) Thread(s) beim Kompilieren"
+          yes "" | make -j$(nproc) || make -j1 V=s target/linux/compile
+          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+          echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+          echo "compile=success" >> $GITHUB_OUTPUT
+          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
+          echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
-    - name: bin-Verzeichnis als Artefakt hochladen
-      uses: actions/upload-artifact@v4
-      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
-      with:
-        name: "ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}"
-        path: openwrt/bin
+      - name: bin-Verzeichnis als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
+        with:
+          name: "ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}"
+          path: openwrt/bin
 
-    - name: GitHub Release erstellen
-      uses: softprops/action-gh-release@v2
-      if: steps.compile.outputs.compile == 'success' && !cancelled()
-      with:
-        name: "ImmortalWrt Brume 3 (GL-MT5000) ${{ steps.compile.outputs.file-date }}"
-        tag_name: "ImmortalWrt_GL-MT5000_${{ steps.compile.outputs.file-date }}"
-        body: |
-          ImmortalWrt Master Build für GL.iNet MT5000 mit integriertem RTL8366UB DSA-Treiber (MDIO) und USB-Storage Support.
-        files: |
-          openwrt/bin/targets/*/*/*sysupgrade*
-          openwrt/bin/targets/*/*/*factory*
-          openwrt/bin/targets/*/*/*manifest*
-          openwrt/bin/targets/*/*/*sha256sums
+      - name: GitHub Release erstellen
+        uses: softprops/action-gh-release@v2
+        if: steps.compile.outputs.compile == 'success' && !cancelled()
+        with:
+          name: "ImmortalWrt Brume 3 (GL-MT5000) ${{ steps.compile.outputs.file-date }}"
+          tag_name: "ImmortalWrt_GL-MT5000_${{ steps.compile.outputs.file-date }}"
+          body: |
+            ImmortalWrt Master Build für GL.iNet MT5000 mit integriertem RTL8366UB DSA-Treiber (MDIO) und USB-Storage Support.
+          files: |
+            openwrt/bin/targets/*/*/*sysupgrade*
+            openwrt/bin/targets/*/*/*factory*
+            openwrt/bin/targets/*/*/*manifest*
+            openwrt/bin/targets/*/*/*sha256sums
