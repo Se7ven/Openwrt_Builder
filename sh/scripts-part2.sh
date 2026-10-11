@@ -38,7 +38,7 @@ declare -A REPOS=(
     ["https://github.com/gaoderby/luci-app-kms.git"]=""
     ["https://github.com/sbwml/luci-app-ramfree.git"]=""
     ["https://github.com/lisaac/luci-app-diskman"]=""
-	["https://github.com/tty228/luci-app-wechatpush.git"]=""
+    ["https://github.com/tty228/luci-app-wechatpush.git"]=""
 )
 
 CONFLICTING_MAKEFILE_KEYWORDS=(
@@ -108,7 +108,8 @@ rm -rf feeds/packages/net/openvswitch package/feeds/packages/openvswitch 2>/dev/
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
 # 2. MT5000 SPEZIFISCHE KONFIGURATIONEN & BRANDING
-if [[ "$WORKFLOW_NAME" == "GL-MT5000" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" ]]; then
+# Tolerantere Abfrage, falls der Name im Workflow abweicht
+if [[ "${WORKFLOW_NAME,,}" == *"mt5000"* || "${WORKFLOW_NAME,,}" == *"brume 3"* ]]; then
     echo ">>> Konfiguriere Netzwerk & Basis für GL-MT5000 <<<"
 
     mkdir -p package/base-files/files/etc/config
@@ -145,13 +146,22 @@ EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
     # --- BRANDING NUR FÜR IMMORTALWRT WORKFLOWS ---
-    if [[ "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" ]]; then
+    # Sucht im Workflow-Namen nach dem Wort (Groß-/Kleinschreibung wird ignoriert)
+    if [[ "${WORKFLOW_NAME,,}" == *"immortalwrt"* || "${WORKFLOW_NAME,,}" == *"immortal"* ]]; then
         echo ">>> Setze ImmortalWrt Identität & Banner <<<"
         
+        # 1. Hostname beim ersten Start über UCI erzwingen
+        cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-set-hostname
+uci set system.@system[0].hostname='ImmortalWrt'
+uci commit system
+exit 0
+EOF
+        chmod +x package/base-files/files/etc/uci-defaults/99-set-hostname
+
+        # 2. Basis-Version patchen (Fallback)
         sed -i 's/VERSION_DIST:=OpenWrt/VERSION_DIST:=ImmortalWrt/g' include/version.mk 2>/dev/null || true
-        sed -i 's/VERSION_MANUFACTURER:=OpenWrt/VERSION_MANUFACTURER:=ImmortalWrt/g' include/version.mk 2>/dev/null || true
-        sed -i 's/OpenWrt /ImmortalWrt /g' package/base-files/files/bin/config_generate 2>/dev/null || true
         
+        # 3. Das Banner schreiben
         cat << 'EOF' > package/base-files/files/etc/banner
   _____                               _         _ __          __      _   
  |_   _|                             | |       | |\ \        / /     | |  
