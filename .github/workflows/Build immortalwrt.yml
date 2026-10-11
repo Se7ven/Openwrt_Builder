@@ -96,22 +96,25 @@ jobs:
         cd openwrt
         [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
 
-        # Reale Kernel- & DSA-Symbole für Realtek RTL8366UB via MDIO erzwingen
+        # MT5000 Target-Profil und DSA-Treiber verbindlich festschreiben
         cat >> .config << 'EOF'
-        CONFIG_PACKAGE_kmod-dsa=y
-        CONFIG_PACKAGE_kmod-dsa-realtek=y
-        CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
-        CONFIG_NET_DSA_REALTEK=y
-        CONFIG_NET_DSA_REALTEK_RTL8366UB=y
-        CONFIG_NET_DSA_REALTEK_RTL8366RB=y
-        CONFIG_NET_DSA_REALTEK_MDIO=y
-        CONFIG_NET_DSA_REALTEK_SMI=y
-        EOF
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
+CONFIG_PACKAGE_kmod-dsa=y
+CONFIG_PACKAGE_kmod-dsa-realtek=y
+CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y
+CONFIG_NET_DSA_REALTEK=y
+CONFIG_NET_DSA_REALTEK_RTL8366UB=y
+CONFIG_NET_DSA_REALTEK_RTL8366RB=y
+CONFIG_NET_DSA_REALTEK_MDIO=y
+CONFIG_NET_DSA_REALTEK_SMI=y
+EOF
 
         make defconfig
 
-        echo "=== Überprüfe Status der DSA-Treiber in .config ==="
-        grep -E "CONFIG_PACKAGE_kmod-dsa.*=y|CONFIG_NET_DSA.*=y" .config || true
+        echo "=== Überprüfe gewähltes Target-Gerät ==="
+        grep "^CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
 
     - name: Paketquellen herunterladen (make download)
       id: package
