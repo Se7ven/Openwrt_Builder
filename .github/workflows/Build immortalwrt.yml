@@ -29,17 +29,8 @@ env:
 
 jobs:
   build:
-    name: Kompiliere ${{ matrix.device }}
+    name: Kompiliere GL-MT5000 Master
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - device: GL-MT5000
-            repo_url: https://github.com/immortalwrt/immortalwrt.git
-            repo_branch: master
-            config_file: ./config/immortalwrt.config
-            workflow_name: gl-mt5000_immortalwrt
 
     steps:
       - name: Repository auschecken
@@ -60,64 +51,48 @@ jobs:
           sudo timedatectl set-timezone "$TZ"
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
-          echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
+          echo "WORKFLOW_NAME=gl-mt5000_immortalwrt" >> $GITHUB_ENV
           INPUT_TAG2="${{ github.event.inputs.tag2 }}"
           [ -z "$INPUT_TAG2" ] && INPUT_TAG2="master"
-          echo "TAG2=$INPUT_TAG2" | tr ' ' '_' >> $GITHUB_ENV
+          echo "TAG2=$INPUT_TAG2" \vert{} tr ' ' '_' >> $GITHUB_ENV
 
       - name: Quellcode klonen
         working-directory: /workdir
         run: |
-          git clone ${{ matrix.repo_url }} --single-branch -b ${{ matrix.repo_branch }} openwrt
+          git clone --depth 1 -b mt5000 https://github.com/GLiNet-Tech/openwrt.git openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
-      - name: Feeds laden und DIY-Skript Teil 1 ausführen
+      - name: Feeds konfigurieren und DIY 1 ausführen
         run: |
-          [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
-          [ -f $DIY_P1_SH ] && chmod +x $DIY_P1_SH
           cd openwrt
-          sed -i 's/.*video/#&/' feeds.conf.default || true
-          [ -f $GITHUB_WORKSPACE/$DIY_P1_SH ] && $GITHUB_WORKSPACE/$DIY_P1_SH || true
+          echo "src-git packages https://github.com/immortalwrt/packages.git;master" > feeds.conf.default
+          echo "src-git luci https://github.com/immortalwrt/luci.git;master" >> feeds.conf.default
+          echo "src-git routing https://github.com/openwrt/routing.git;master" >> feeds.conf.default
+          echo "src-git telephony https://github.com/openwrt/telephony.git;master" >> feeds.conf.default
+          echo "src-git footstrap https://github.com/VizzleTF/luci-theme-footstrap.git" >> feeds.conf.default
+          [ -f $GITHUB_WORKSPACE/$DIY_P1_SH ] && chmod +x $GITHUB_WORKSPACE/$DIY_P1_SH && $GITHUB_WORKSPACE/$DIY_P1_SH || true
           ./scripts/feeds update -a
-
-      - name: Feeds installieren
-        run: |
-          cd openwrt
           ./scripts/feeds install -a
 
-      - name: Benutzerdefinierte Konfiguration anwenden und DIY-Skript Teil 2 ausführen
+      - name: Konfiguration anwenden und DIY 2 ausführen
         run: |
-          [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
+          [ -e $DEFAULT_SETTING ] && mv$DEFAULT_SETTING openwrt/package/default-settings-m0eak
           [ -e files ] && mv ./files openwrt/files
-          [ -e ${{ matrix.config_file }} ] && mv ${{ matrix.config_file }} openwrt/.config
+          [ -e ./config/immortalwrt.config ] && cp ./config/immortalwrt.config openwrt/.config
           if [ "${{ github.event.inputs.docker }}" = "true" ] && [ -e $CONFIG_FILE_DOCKER ]; then
             cat $CONFIG_FILE_DOCKER >> openwrt/.config
           fi
-
-          [ -f $DIY_P2_SH ] && chmod +x $DIY_P2_SH
+          [ -f $DIY_P2_SH ] && chmod +x$DIY_P2_SH
           cd openwrt
           [ -f $GITHUB_WORKSPACE/$DIY_P2_SH ] && $GITHUB_WORKSPACE/$DIY_P2_SH || true
-
           echo "CONFIG_TARGET_mediatek=y" >> .config
           echo "CONFIG_TARGET_mediatek_filogic=y" >> .config
           echo "CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_glinet_gl-mt5000=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-dsa=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-dsa-realtek=y" >> .config
-          echo "CONFIG_PACKAGE_kmod-dsa-tag-rtl4-a=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK_RTL8366UB=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK_RTL8366RB=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK_MDIO=y" >> .config
-          echo "CONFIG_NET_DSA_REALTEK_SMI=y" >> .config
-
-          rm -rf tmp/.config* tmp/.targetinfo
           make defconfig
-
           echo "=== Überprüfe gewähltes Target-Gerät ==="
           grep "^CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_" .config || true
 
-      - name: Paketquellen herunterladen (make download)
-        id: package
+      - name: Paketquellen herunterladen
         run: |
           cd openwrt
           make download -j8
@@ -127,13 +102,12 @@ jobs:
         id: compile
         run: |
           cd openwrt
-          echo -e "$(nproc) Thread(s) beim Kompilieren"
+          echo "$(nproc) Thread(s) beim Kompilieren"
           yes "" | make -j$(nproc) || make -j1 V=s target/linux/compile
           grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
-          echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
           echo "compile=success" >> $GITHUB_OUTPUT
           echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
-          echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
+          echo "file-date=$(date +"\%Y\%m\%d\%H\%M")" >> $GITHUB_OUTPUT
 
       - name: bin-Verzeichnis als Artefakt hochladen
         uses: actions/upload-artifact@v4
@@ -142,17 +116,10 @@ jobs:
           name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}
           path: openwrt/bin
 
-      - name: GitHub Release erstellen
+      - name: Release erstellen
         uses: softprops/action-gh-release@v2
         if: steps.compile.outputs.compile == 'success' && !cancelled()
         with:
-          name: ImmortalWrt Brume 3 (GL-MT5000) ${{ steps.compile.outputs.file-date }}
-          tag_name: ImmortalWrt_GL-MT5000_${{ steps.compile.outputs.file-date }}
-          body: |
-            ImmortalWrt Master Build für GL.iNet MT5000 mit integriertem RTL8366UB DSA-Treiber (MDIO) und USB-Storage Support.
-          files: |
-            openwrt/bin/targets/*/*/*sysupgrade*
-            openwrt/bin/targets/*/*/*factory*
-            openwrt/bin/targets/*/*/*manifest*
-            openwrt/bin/targets/*/*/*sha256sums
-            
+          name: ImmortalWrt Brume 3 (GL-MT5000) Master ${{ steps.compile.outputs.file-date }}
+          tag_name: ImmortalWrt_GL
+          
