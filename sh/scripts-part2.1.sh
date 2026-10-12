@@ -3,7 +3,7 @@
 # Custom Script Part 2.1 (ImmortalWrt GL-MT5000 Injektions-Skript)
 # =================================================================
 
-echo "Starte Part 2.1: Injiziere Kernel-Patches und Board-Definitionen für GL-MT5000..."
+echo "Starte Part 2.1: Injiziere Patches, Board-Dateien und Netzwerkeinstellungen..."
 
 # --- 1. Kernel-Patches für MT7987/MT7988 injizieren ---
 TARGET_PATCH_DIR="target/linux/mediatek/patches-6.18"
@@ -30,13 +30,14 @@ fi
 
 
 # --- 2. Board-Definitionen & DTS für GL-MT5000 injizieren ---
-# (Vorausgesetzt, du hast die angepassten Board-Dateien im Repo unter 'board/' abgelegt)
 BOARD_TARGET_DIR="target/linux/mediatek/image"
 
 if [ -d "$BOARD_TARGET_DIR" ] && [ -d "board" ]; then
-    echo "Injiziere Board-Konfigurationen und Device-Trees..."
+    echo "Injiziere Board-Konfigurationen aus dem 'board/' Ordner..."
     cp -rf board/* "$BOARD_TARGET_DIR/"
     echo "Board-Dateien erfolgreich kopiert."
+else
+    echo "Hinweis: Kein 'board/' Ordner oder Zielverzeichnis gefunden, überspringe Board-Injektion."
 fi
 
 
