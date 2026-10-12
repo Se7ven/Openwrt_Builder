@@ -10,19 +10,11 @@ TARGET_PATCH_DIR="target/linux/mediatek/patches-6.18"
 
 if [ -d "$TARGET_PATCH_DIR" ]; then
     echo "Zielverzeichnis für Patches gefunden: $TARGET_PATCH_DIR"
-    
-    if [ -f "patches/750-net-ethernet-mtk_eth_soc-add-mt7987-support.patch" ]; then
-        cp -f patches/750-net-ethernet-mtk_eth_soc-add-mt7987-support.patch "$TARGET_PATCH_DIR/"
-        echo "Patch 750 erfolgreich injiziert."
+    if [ -d "patches" ]; then
+        cp -f patches/*.patch "$TARGET_PATCH_DIR/"
+        echo "Alle Kernel-Patches aus dem patches/-Ordner erfolgreich injiziert."
     else
-        echo "Warnung: Patch 750 nicht im patches/-Ordner gefunden!"
-    fi
-
-    if [ -f "patches/751-net-ethernet-mtk_eth_soc-revise-hardware-configuration-for-mt7987.patch" ]; then
-        cp -f patches/751-net-ethernet-mtk_eth_soc-revise-hardware-configuration-for-mt7987.patch "$TARGET_PATCH_DIR/"
-        echo "Patch 751 erfolgreich injiziert."
-    else
-        echo "Warnung: Patch 751 nicht im patches/-Ordner gefunden!"
+        echo "Warnung: patches/-Ordner nicht gefunden!"
     fi
 else
     echo "Fehler: Patch-Verzeichnis $TARGET_PATCH_DIR existiert nicht im Quellbaum!"
@@ -30,14 +22,14 @@ fi
 
 
 # --- 2. Board-Definitionen & DTS für GL-MT5000 injizieren ---
-BOARD_TARGET_DIR="target/linux/mediatek/image"
-
-if [ -d "$BOARD_TARGET_DIR" ] && [ -d "board" ]; then
-    echo "Injiziere Board-Konfigurationen aus dem 'board/' Ordner..."
-    cp -rf board/* "$BOARD_TARGET_DIR/"
-    echo "Board-Dateien erfolgreich kopiert."
+# Da du die Struktur board/target/linux/mediatek/... im Repo angelegt hast,
+# kopieren wir den Inhalt direkt in den Root des Quellbaums.
+if [ -d "board/target" ]; then
+    echo "Injiziere Board-Konfigurationen und DTS-Dateien..."
+    cp -rf board/target/* target/
+    echo "Board-Dateien erfolgreich in den Quellbaum kopiert."
 else
-    echo "Hinweis: Kein 'board/' Ordner oder Zielverzeichnis gefunden, überspringe Board-Injektion."
+    echo "Hinweis: Kein 'board/target'-Ordner gefunden, überspringe Board-Injektion."
 fi
 
 
