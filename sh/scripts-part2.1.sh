@@ -28,3 +28,14 @@ if [ -d "$TARGET_PATCH_DIR" ]; then
 else
     echo "Fehler: Ziel-Patch-Verzeichnis $TARGET_PATCH_DIR existiert im Quellbaum nicht!"
 fi
+
+# --- NEU: Standard-LAN-IP auf 192.168.100.1 setzen ---
+echo "Passe Standard-LAN-IP auf 192.168.100.1 an..."
+NETWORK_GEN="package/base-files/files/bin/config_generate"
+if [ -f "$NETWORK_GEN" ]; then
+    sed -i 's/192.168.1.1/192.168.100.1/g' "$NETWORK_GEN"
+    echo "LAN-IP erfolgreich in config_generate angepasst."
+else
+    find . -path "*/base-files/files/bin/config_generate" -exec sed -i 's/192.168.1.1/192.168.100.1/g' {} +
+    echo "LAN-IP über Alternatives-Pfad-Finden angepasst."
+fi
