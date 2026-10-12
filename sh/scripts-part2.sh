@@ -103,6 +103,14 @@ reset_custom_package_dir
 remove_conflicting_makefiles
 clone_custom_repos
 
+# --- FIX: GO-COMPILER AKTUALISIEREN ---
+echo ">>> Aktualisiere internen Go-Compiler aus dem Master-Branch <<<"
+rm -rf feeds/packages/lang/golang
+git clone https://github.com/immortalwrt/packages.git temp_packages
+cp -r temp_packages/lang/golang feeds/packages/lang/
+rm -rf temp_packages
+# --------------------------------------
+
 # Kollidierende Standard-Pakete entfernen
 rm -rf feeds/packages/net/openvswitch package/feeds/packages/openvswitch 2>/dev/null || true
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
@@ -163,12 +171,12 @@ EOF
         
         # 3. Das Banner schreiben
         cat << 'EOF' > package/base-files/files/etc/banner
-  _____                                _         _ __          __      _   
- |_   _|                              | |       | |\ \        / /     | |  
-   | |  _ __ ___  _ __ ___   ___  _ __| |_  __ _| | \ \  /\  / /_ __  | |_ 
-   | | | '_ ` _ \| '_ ` _ \ / _ \| '__| __|/ _` | |  \ \/  \/ /| '__| | __|
-  _| |_| | | | | | | | | | | (_) | |  | |_| (_| | |   \  /\  / | |    | |_ 
- |_____|_| |_| |_|_| |_| |_|\___/|_|   \__|\__,_|_|    \/  \/  |_|     \__|
+ _____                                _         _  __          __      _   
+|_   _|                              | |       | | \ \        / /     | |  
+  | |  _ __ ___  _ __ ___   ___  _ __| |_  __ _| |  \ \  /\  / /_ __  | |_ 
+  | | | '_ ` _ \| '_ ` _ \ / _ \| '__| __|/ _` | |   \ \/  \/ /| '__| | __|
+ _| |_| | | | | | | | | | | (_) | |  | |_| (_| | |    \  /\  / | |    | |_ 
+|_____|_| |_| |_|_| |_| |_|\___/|_|   \__|\__,_|_|     \/  \/  |_|     \__|
  --------------------------------------------------------------------------
  ImmortalWrt GL-MT5000 (Brume 3)
  --------------------------------------------------------------------------
