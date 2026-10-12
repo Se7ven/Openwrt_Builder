@@ -97,26 +97,17 @@ clone_custom_repos() {
 echo "--- DIY Part 2: Skriptausführung gestartet ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
 
-# 1. ZUERST ALLE PAKETE LADEN UND ABHÄNGIGKEITEN KLÄREN (FÜR ALLE WORKFLOWS)
+# 1. ZUERST ALLE PAKETE LADEN UND ABHÄNGIGKEITEN KLÄREN
 patch_rust_makefile
 reset_custom_package_dir
 remove_conflicting_makefiles
 clone_custom_repos
-
-# --- FIX: GO-COMPILER AKTUALISIEREN ---
-echo ">>> Aktualisiere internen Go-Compiler aus dem Master-Branch <<<"
-rm -rf feeds/packages/lang/golang
-git clone https://github.com/immortalwrt/packages.git temp_packages
-cp -r temp_packages/lang/golang feeds/packages/lang/
-rm -rf temp_packages
-# --------------------------------------
 
 # Kollidierende Standard-Pakete entfernen
 rm -rf feeds/packages/net/openvswitch package/feeds/packages/openvswitch 2>/dev/null || true
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
 # 2. MT5000 SPEZIFISCHE KONFIGURATIONEN & BRANDING
-# Tolerantere Abfrage, falls der Name im Workflow abweicht
 if [[ "${WORKFLOW_NAME,,}" == *"mt5000"* || "${WORKFLOW_NAME,,}" == *"brume 3"* ]]; then
     echo ">>> Konfiguriere Netzwerk & Basis für GL-MT5000 <<<"
 
@@ -154,11 +145,9 @@ EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
     # --- BRANDING NUR FÜR IMMORTALWRT WORKFLOWS ---
-    # Sucht im Workflow-Namen nach dem Wort (Groß-/Kleinschreibung wird ignoriert)
     if [[ "${WORKFLOW_NAME,,}" == *"immortalwrt"* || "${WORKFLOW_NAME,,}" == *"immortal"* ]]; then
         echo ">>> Setze ImmortalWrt Identität & Banner <<<"
         
-        # 1. Hostname beim ersten Start über UCI erzwingen
         cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-set-hostname
 uci set system.@system[0].hostname='ImmortalWrt'
 uci commit system
@@ -166,10 +155,8 @@ exit 0
 EOF
         chmod +x package/base-files/files/etc/uci-defaults/99-set-hostname
 
-        # 2. Basis-Version patchen (Fallback)
         sed -i 's/VERSION_DIST:=OpenWrt/VERSION_DIST:=ImmortalWrt/g' include/version.mk 2>/dev/null || true
         
-        # 3. Das Banner schreiben
         cat << 'EOF' > package/base-files/files/etc/banner
  _____                                _         _  __          __      _   
 |_   _|                              | |       | | \ \        / /     | |  
