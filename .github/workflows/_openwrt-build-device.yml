@@ -65,6 +65,8 @@ jobs:
     name: Kompiliere ${{ inputs.device }}
     # Feste Ubuntu-Version: Workarounds für Runner-Hang/Timeouts sind aktiv
     runs-on: ubuntu-22.04
+    env:
+      GOTOOLCHAIN: path
     steps:
       - name: Repository auschecken
         uses: actions/checkout@main
