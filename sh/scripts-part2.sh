@@ -46,7 +46,7 @@ CONFLICTING_MAKEFILE_KEYWORDS=(
     "openclash"
     "luci-app-lucky"
     "smartdns"
-    "v2ray-geodata"
+    # "v2ray-geodata" -> Entfernt, damit Passwall2 die Geo-Daten findet
     "xray-core"
     "daed"
     "ddns-go"
