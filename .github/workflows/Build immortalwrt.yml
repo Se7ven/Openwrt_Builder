@@ -21,6 +21,7 @@ env:
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
   TZ: Europe/Berlin
+  GOTOOLCHAIN: path
 
 jobs:
   build:
@@ -116,4 +117,3 @@ jobs:
             openwrt/bin/targets/*/*/*factory*
             openwrt/bin/targets/*/*/*manifest*
             openwrt/bin/targets/*/*/*sha256sums
-            
