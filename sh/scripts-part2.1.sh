@@ -10,11 +10,11 @@ TARGET_PATCH_DIR="target/linux/mediatek/patches-6.18"
 
 if [ -d "$TARGET_PATCH_DIR" ]; then
     echo "Zielverzeichnis für Patches gefunden: $TARGET_PATCH_DIR"
-    if [ -d "patches" ]; then
-        cp -f patches/*.patch "$TARGET_PATCH_DIR/"
+    if [ -d "../patches" ]; then
+        cp -f ../patches/*.patch "$TARGET_PATCH_DIR/"
         echo "Alle Kernel-Patches aus dem patches/-Ordner erfolgreich injiziert."
     else
-        echo "Warnung: patches/-Ordner nicht gefunden!"
+        echo "Warnung: ../patches/-Ordner nicht gefunden!"
     fi
 else
     echo "Fehler: Patch-Verzeichnis $TARGET_PATCH_DIR existiert nicht im Quellbaum!"
@@ -22,14 +22,12 @@ fi
 
 
 # --- 2. Board-Definitionen & DTS für GL-MT5000 injizieren ---
-# Da du die Struktur board/target/linux/mediatek/... im Repo angelegt hast,
-# kopieren wir den Inhalt direkt in den Root des Quellbaums.
-if [ -d "board/target" ]; then
+if [ -d "../board/target" ]; then
     echo "Injiziere Board-Konfigurationen und DTS-Dateien..."
-    cp -rf board/target/* target/
+    cp -rf ../board/target/* target/
     echo "Board-Dateien erfolgreich in den Quellbaum kopiert."
 else
-    echo "Hinweis: Kein 'board/target'-Ordner gefunden, überspringe Board-Injektion."
+    echo "Hinweis: Kein '../board/target'-Ordner gefunden, überspringe Board-Injektion."
 fi
 
 
