@@ -38,7 +38,7 @@ jobs:
 
     - name: Clone Source Code
       run: |
-        git clone --depth 1 -b mt5000 https://github.com/GLiNet-Tech/openwrt.git openwrt
+        git clone --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
         ln -s /home/runner/work/Openwrt_Builder/Openwrt_Builder /home/runner/work/Openwrt_Builder/openwrt/custom_files || true
 
     - name: Load Custom Feeds (Part 1.1)
@@ -62,7 +62,7 @@ jobs:
         # Kopiere deine immortalwrt.conf als Basis-Config
         [ -f ../config/immortalwrt.conf ] && cp -f ../config/immortalwrt.conf .config
         
-        # Führe dein Part 2.1 Skript aus (kopiert die Patches in den Kernel-Ordner)
+        # Führe dein Part 2.1 Skript aus (kopiert die Patches & Board-Dateien in den Quellbaum)
         [ -f ../sh/scripts-part2.1.sh ] && chmod +x ../sh/scripts-part2.1.sh && ../sh/scripts-part2.1.sh
         
         make defconfig
