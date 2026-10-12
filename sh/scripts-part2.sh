@@ -107,6 +107,19 @@ clone_custom_repos
 rm -rf feeds/packages/net/openvswitch package/feeds/packages/openvswitch 2>/dev/null || true
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
+# 1. ZUERST ALLE PAKETE LADEN UND ABHÄNGIGKEITEN KLÄREN
+patch_rust_makefile
+reset_custom_package_dir
+remove_conflicting_makefiles
+clone_custom_repos
+
+# ---> FÜGE ES GENAU HIER EIN (ca. Zeile 108/109): <---
+rm -rf "$TARGET_DIR/openwrt-passwall-packages/xray-core" 2>/dev/null || true
+remove_conflicting_makefiles
+
+# Kollidierende Standard-Pakete entfernen
+rm -rf feeds/packages/net/openvswitch package/feeds/packages/openvswitch 2>/dev/null || true
+
 # 2. MT5000 SPEZIFISCHE KONFIGURATIONEN & BRANDING
 if [[ "${WORKFLOW_NAME,,}" == *"mt5000"* || "${WORKFLOW_NAME,,}" == *"brume 3"* ]]; then
     echo ">>> Konfiguriere Netzwerk & Basis für GL-MT5000 <<<"
