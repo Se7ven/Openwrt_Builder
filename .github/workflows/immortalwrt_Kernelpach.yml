@@ -38,7 +38,7 @@ jobs:
 
     - name: Clone Source Code
       run: |
-        git clone --depth 1 -b openwrt-25.12 https://github.com/immortalwrt/immortalwrt.git openwrt
+        git clone --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
         ln -s /home/runner/work/Openwrt_Builder/Openwrt_Builder /home/runner/work/Openwrt_Builder/openwrt/custom_files || true
 
     - name: Load Custom Feeds (Part 1.1)
