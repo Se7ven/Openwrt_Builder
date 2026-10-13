@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Absolute Path Execution & Universal Config Cleanup
+# Prepare Script - Absolute Path Execution & Smart Config Sanitization
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -94,8 +94,8 @@ while [ ! -s .config ]; do
     fi
 done
 
-# 7. Target-Konfiguration für GL-MT5000 erzwingen
-echo "===> Forcing GL-MT5000 target configuration in .config..."
+# 7. Target-Konfiguration für GL-MT5000 bereinigen und erzwingen
+echo "===> Sanitizing and forcing GL-MT5000 target configuration in .config..."
 
 sed -i '/CONFIG_TARGET_BOARD/d' .config
 sed -i '/CONFIG_TARGET_SUBTARGET/d' .config
@@ -142,8 +142,12 @@ config interface 'wan'
 	option proto 'dhcp'
 EOF
 
-# 8. Konfiguration absolut non-interaktiv bereinigen und abschließen (räumt veraltete Optionen auf)
-echo "===> Cleaning up and finalizing configuration with olddefconfig..."
+# 8. Intelligenter automatischer Abgleich (Sanitization & Olddefconfig)
+echo "===> Running automated configuration sanitization and sync..."
+# Entfernt hängende/ungültige Zeilen und korrigiert Syntax-Konflikte vor dem alten Defconfig
+sed -i '/^#.*is not set$/!{/=/!d}' .config 2>/dev/null || true
+
+# Absolut non-interaktiver Durchlauf, der fehlende Defaults automatisch ergänzt
 yes "" | make olddefconfig
 
 # 9. Kontrolle
