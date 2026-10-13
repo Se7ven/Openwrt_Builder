@@ -3,7 +3,17 @@
 # Custom Script Part 2.1 (ImmortalWrt GL-MT5000 Injektions-Skript)
 # =================================================================
 
-echo "Starte Part 2.1: Injiziere Patches, Board-Dateien und Netzwerkeinstellungen..."
+echo "Starte Part 2.1: Kernel anpassen, Patches und Board-Dateien injizieren..."
+
+# --- 0. Kernel-Version auf 6.18.44 festnageln ---
+KERNEL_VERSION_FILE="include/kernel-6.18"
+if [ -f "$KERNEL_VERSION_FILE" ]; then
+    echo "Passe Kernel-Version in $KERNEL_VERSION_FILE auf 6.18.44 an..."
+    sed -i 's/LINUX_VERSION:=.*/LINUX_VERSION:=6.18.44/g' "$KERNEL_VERSION_FILE"
+else
+    echo "Warnung: $KERNEL_VERSION_FILE nicht gefunden, verwende Standard-Kernel."
+fi
+
 
 # --- 1. Kernel-Patches für MT7987/MT7988 injizieren ---
 TARGET_PATCH_DIR="target/linux/mediatek/patches-6.18"
