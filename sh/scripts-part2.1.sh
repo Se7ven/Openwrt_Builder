@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Custom Part 2.1 Script - Cleaned & Config-Safe
+# Custom Part 2.1 Script - Cleaned, DTS & filogic.mk Injection
 # =================================================================
 
 TARGET_BRANCH="${BUILD_BRANCH:-openwrt-25.12}"
@@ -12,6 +12,15 @@ if [ -d "../board/target/linux/mediatek/dts" ]; then
     cp -rf ../board/target/linux/mediatek/dts/* target/linux/mediatek/dts/
 else
     echo "===> FEHLER: DTS-Ordner ../board/target/linux/mediatek/dts nicht gefunden!"
+    exit 1
+fi
+
+# 1.1 filogic.mk Injektion für die GL-MT5000 Device-Definition
+if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
+    echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
+    cp -f ../board/target/linux/mediatek/image/filogic.mk target/linux/mediatek/image/filogic.mk
+else
+    echo "===> FEHLER: filogic.mk unter ../board/target/linux/mediatek/image/ nicht gefunden!"
     exit 1
 fi
 
