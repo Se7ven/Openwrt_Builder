@@ -49,16 +49,16 @@ jobs:
           BRANCH="openwrt-25.12"
         fi
         
-        echo "===> Cloning ImmortalWrt repository..."
-        git clone https://github.com/immortalwrt/immortalwrt.git openwrt
-        cd openwrt
+        if [ "$BRANCH" = "main" ]; then
+          echo "===> Ziehe den Standard-Zweig ohne Branch-Angabe (führt zu Kernel 6.18.x)"
+          git clone --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
+        else
+          echo "===> Ziehe explizit den Branch: $BRANCH (führt zu Kernel 6.12)"
+          git clone --branch "$BRANCH" --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
+        fi
         
-        echo "===> Checking out branch: $BRANCH"
-        git checkout "$BRANCH" || git checkout -b "$BRANCH" origin/"$BRANCH"
-        cd ..
-        
-        mkdir -p openwrt/custom_files
-        [ -d "custom_files" ] && cp -rf custom_files/* openwrt/custom_files/ || true
+        echo "===> Setze Symlink für custom_files"
+        ln -s /home/runner/work/Openwrt_Builder/Openwrt_Builder /home/runner/work/Openwrt_Builder/openwrt/custom_files || true
 
     - name: Load Custom Feeds (Part 1.1)
       run: |
@@ -92,7 +92,7 @@ jobs:
         cd openwrt
         make -j$(nproc) || make -j1 V=s
         
-        # Setze die Variablen für nachfolgende Schritte (Datum und Status)
+        # Setze die Variablen für nachfolgende Schritte
         echo "compile=success" >> $GITHUB_OUTPUT
         echo "file-date=$(date +'\%Y.\%m.\%d')" >> $GITHUB_OUTPUT
         echo "device-name=gl-mt5000" >> $GITHUB_OUTPUT
@@ -113,7 +113,7 @@ jobs:
         prerelease: true
         body: |
           Automatisierter ImmortalWrt Build für den GL-MT5000 (Brume 3).
-          - Verwendeter Branch/Tag: `${{ github.event.inputs.branch }}`
+          - Verwendeter Branch: `${{ github.event.inputs.branch }}`
           - Build-Datum: `${{ steps.compile.outputs.file-date }}`
           - GitHub Run: `#${{ github.run_number }}`
         files: |
