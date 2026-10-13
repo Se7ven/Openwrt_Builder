@@ -1,36 +1,90 @@
-#!/bin/bash
-# =================================================================
-# Custom Script Part 2.1 (ImmortalWrt GL-MT5000 Injektions-Skript)
-# =================================================================
+name: ImmortalWrt KernelPatch Builder
 
-echo "Starte Part 2.1 fuer Kernel 6.12..."
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
 
-# --- 1. Zusaetzliche Kernel-Patches in patches-6.12 injizieren ---
-PATCH_DIR="target/linux/mediatek/patches-6.12"
-if [ -d "$PATCH_DIR" ] && [ -d "../patches" ]; then
-    cp -f ../patches/*.patch "$PATCH_DIR/"
-    echo "Patches erfolgreich in patches-6.12 kopiert."
-else
-    echo "Hinweis: Patch-Verzeichnis oder ../patches nicht gefunden."
-fi
+jobs:
+  build:
+    runs-on: ubuntu-22.04
 
-# --- 2. Board-Definitionen & DTS fuer GL-MT5000 injizieren ---
-BOARD_DIR="../board/target"
-if [ -d "$BOARD_DIR" ]; then
-    cp -rf "$BOARD_DIR"/* target/
-    echo "Board-Definitionen und DTS-Dateien erfolgreich in den Quellbaum kopiert."
-else
-    echo "Hinweis: Kein Board-Verzeichnis unter ../board/target gefunden."
-fi
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-# --- 3. Standard-LAN-IP auf 192.168.100.1 setzen ---
-NET_GEN="package/base-files/files/bin/config_generate"
-if [ -f "$NET_GEN" ]; then
-    sed -i 's/192.168.1.1/192.168.100.1/g' "$NET_GEN"
-    echo "LAN-IP erfolgreich angepasst."
-else
-    find . -path "*/base-files/files/bin/config_generate" -exec sed -i 's/192.168.1.1/192.168.100.1/g' {} +
-    echo "LAN-IP ueber alternativen Pfad angepasst."
-fi
+    - name: Initialization Environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo -E apt-get -y update
+        sudo -E apt-get -y install $(cat << 'EOF'
+        libncurses5-dev libncursesw5-dev zlib1g-dev gawk
+        flex patch gettext zlib1g-dev libc6-dev libssl-dev subversion
+        git unzip sharutils subversion libxml-parser-perl ocaml-nox
+        asciidoc libz-dev xsltproc libjson-perl libelf-dev libgmp-dev
+        liblzma-dev rsync cpio wget python3 python3-pip swig time
+        libfile-slurp-perl rsync g++ libtool autoconf automake autopoint
+        uuid-dev libncurses-dev gettext libtool-bin cmake gperf upx-ucl
+        EOF
+        )
+        sudo -E apt-get -y autoremove --purge
+        sudo -E apt-get clean
 
-echo "Part 2.1 erfolgreich abgeschlossen."
+    - name: Clone Source Code
+      run: |
+        git clone --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
+        mkdir -p openwrt/custom_files
+        ln -sf /home/runner/work/Openwrt_Builder/Openwrt_Builder /home/runner/work/Openwrt_Builder/openwrt/custom_files || true
+
+    - name: Load Custom Feeds (Part 1.1)
+      run: |
+        cd openwrt
+        [ -f ../sh/scripts-part1.1.sh ] && chmod +x ../sh/scripts-part1.1.sh && ../sh/scripts-part1.1.sh
+
+    - name: Update Feeds
+      run: |
+        cd openwrt
+        ./scripts/feeds update -a
+
+    - name: Install Feeds
+      run: |
+        cd openwrt
+        ./scripts/feeds install -a
+
+    - name: Load Custom Configuration & Scripts (Part 2.1)
+      run: |
+        cd openwrt
+        # Kopiere deine immortalwrt.conf als Basis-Config
+        [ -f ../config/immortalwrt.conf ] && cp -f ../config/immortalwrt.conf .config
+        
+        # Führe dein Part 2.1 Skript aus (arbeitet mit dem nativen Kernel 6.12 und injiziert Patches)
+        [ -f ../sh/scripts-part2.1.sh ] && chmod +x ../sh/scripts-part2.1.sh && ../sh/scripts-part2.1.sh
+        
+        make defconfig
+
+    - name: Compile Firmware
+      run: |
+        cd openwrt
+        make -j$(nproc) || make -j1 V=s
+
+    - name: Organize Files
+      id: organize
+      if: (!cancelled())
+      run: |
+        cd openwrt
+        rm -rf bin/targets/*/*/packages
+        echo "FIRMWARE=$PWD/bin/targets" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_ENV
+
+    - name: Upload Firmware to Artifacts
+      uses: actions/upload-artifact@v4
+      if: steps.organize.outputs.status == 'success' && !cancelled()
+      with:
+        name: ImmortalWrt_MT5000_Firmware
+        path: ${{ env.FIRMWARE }}
