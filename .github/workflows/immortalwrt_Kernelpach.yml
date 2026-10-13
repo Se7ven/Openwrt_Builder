@@ -40,7 +40,8 @@ jobs:
       run: |
         git clone --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
         mkdir -p openwrt/custom_files
-        ln -sf /home/runner/work/Openwrt_Builder/Openwrt_Builder /home/runner/work/Openwrt_Builder/openwrt/custom_files || true
+        # Sauberer relativer Kopiervorgang statt fehlerhaftem absolutem Symlink
+        [ -d "custom_files" ] && cp -rf custom_files/* openwrt/custom_files/ || true
 
     - name: Load Custom Feeds (Part 1.1)
       run: |
@@ -63,7 +64,7 @@ jobs:
         # Kopiere deine immortalwrt.conf als Basis-Config
         [ -f ../config/immortalwrt.conf ] && cp -f ../config/immortalwrt.conf .config
         
-        # Führe dein Part 2.1 Skript aus (arbeitet mit dem nativen Kernel 6.12 und injiziert Patches)
+        # Führe dein Part 2.1 Skript aus (kopiert Patches und Board-Definitionen)
         [ -f ../sh/scripts-part2.1.sh ] && chmod +x ../sh/scripts-part2.1.sh && ../sh/scripts-part2.1.sh
         
         make defconfig
