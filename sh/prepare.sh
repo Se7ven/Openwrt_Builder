@@ -111,6 +111,34 @@ CONFIG_TARGET_SUBTARGET="filogic"
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
+# 7.5 Netzwerkkonfiguration für GL-MT5000 hinterlegen
+echo "===> Konfiguriere Netzwerk & Basis für GL-MT5000..."
+
+mkdir -p package/base-files/files/etc/config
+cat << 'EOF' > package/base-files/files/etc/config/network
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config device
+	option name 'br-lan'
+	option type 'bridge'
+	list ports 'lan1'
+	list ports 'lan2'
+
+config interface 'lan'
+	option device 'br-lan'
+	option proto 'static'
+	option ipaddr '192.168.100.1'
+	option netmask '255.255.255.0'
+
+config interface 'wan'
+	option device 'eth1'
+	option proto 'dhcp'
+EOF
+
 # 8. Konfiguration abschließen mit olddefconfig
 echo "===> Finalizing configuration with olddefconfig..."
 make olddefconfig > /dev/null 2>&1 || true
