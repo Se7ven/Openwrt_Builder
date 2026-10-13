@@ -3,15 +3,15 @@
 # Custom Script Part 2.1 (ImmortalWrt GL-MT5000 Injektions-Skript)
 # =================================================================
 
-echo "Starte Part 2.1: Kernel anpassen, Patches und Board-Dateien injizieren..."
+echo "Starte Part 2.1: Kernel-Patch-Version auf 6.18 anpassen, Patches und Board-Dateien injizieren..."
 
-# --- 0. Kernel-Version auf 6.18.44 festnageln ---
-KERNEL_VERSION_FILE="include/kernel-6.18"
-if [ -f "$KERNEL_VERSION_FILE" ]; then
-    echo "Passe Kernel-Version in $KERNEL_VERSION_FILE auf 6.18.44 an..."
-    sed -i 's/LINUX_VERSION:=.*/LINUX_VERSION:=6.18.44/g' "$KERNEL_VERSION_FILE"
+# --- 0. Kernel-Patch-Version im Mediatk-Target auf 6.18 setzen ---
+MEDIATEK_MAKEFILE="target/linux/mediatek/Makefile"
+if [ -f "$MEDIATEK_MAKEFILE" ]; then
+    echo "Passe KERNEL_PATCHVER in $MEDIATEK_MAKEFILE auf 6.18 an..."
+    sed -i 's/KERNEL_PATCHVER:=.*/KERNEL_PATCHVER:=6.18/g' "$MEDIATEK_MAKEFILE"
 else
-    echo "Warnung: $KERNEL_VERSION_FILE nicht gefunden, verwende Standard-Kernel."
+    echo "Warnung: $MEDIATEK_MAKEFILE nicht gefunden!"
 fi
 
 
