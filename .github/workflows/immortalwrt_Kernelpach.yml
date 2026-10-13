@@ -16,6 +16,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout Repository
@@ -76,22 +78,37 @@ jobs:
         make defconfig
 
     - name: Compile Firmware
+      id: compile
       run: |
         cd openwrt
         make -j$(nproc) || make -j1 V=s
+        
+        # Setze die Variablen für nachfolgende Schritte (Datum und Status)
+        echo "compile=success" >> $GITHUB_OUTPUT
+        echo "file-date=$(date +'\%Y.\%m.\%d')" >> $GITHUB_OUTPUT
+        echo "device-name=gl-mt5000" >> $GITHUB_OUTPUT
 
-    - name: Organize Files
-      id: organize
-      if: (!cancelled())
-      run: |
-        cd openwrt
-        rm -rf bin/targets/*/*/packages
-        echo "FIRMWARE=$PWD/bin/targets" >> $GITHUB_ENV
-        echo "status=success" >> $GITHUB_ENV
-
-    - name: Upload Firmware to Artifacts
+    - name: bin-Verzeichnis als Artefakt hochladen
       uses: actions/upload-artifact@v4
-      if: steps.organize.outputs.status == 'success' && !cancelled()
+      if: steps.compile.outputs.compile == 'success'
       with:
-        name: ImmortalWrt_MT5000_Firmware_${{ github.event.inputs.branch }}
-        path: ${{ env.FIRMWARE }}
+        name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}
+        path: openwrt/bin
+
+    - name: Release erstellen
+      uses: softprops/action-gh-release@v2
+      if: steps.compile.outputs.compile == 'success' && !cancelled()
+      with:
+        name: ImmortalWrt Brume 3 (GL-MT5000) ${{ github.event.inputs.branch }} (${{ steps.compile.outputs.file-date }})
+        tag_name: gl-mt5000-${{ github.event.inputs.branch }}-${{ steps.compile.outputs.file-date }}-${{ github.run_number }}
+        prerelease: true
+        body: |
+          Automatisierter ImmortalWrt Build für den GL-MT5000 (Brume 3).
+          - Verwendeter Branch/Tag: `${{ github.event.inputs.branch }}`
+          - Build-Datum: `${{ steps.compile.outputs.file-date }}`
+          - GitHub Run: `#${{ github.run_number }}`
+        files: |
+          openwrt/bin/targets/*/*/*sysupgrade*
+          openwrt/bin/targets/*/*/*factory*
+          openwrt/bin/targets/*/*/*manifest*
+          openwrt/bin/targets/*/*/*sha256sums
