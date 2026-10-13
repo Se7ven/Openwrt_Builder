@@ -92,27 +92,25 @@ jobs:
         make -j$(nproc) || make -j1 V=s
         
         echo "compile=success" >> $GITHUB_OUTPUT
-        echo "file-date=$(date +'\%Y.\%m.\%d')" >> $GITHUB_OUTPUT
         echo "device-name=gl-mt5000" >> $GITHUB_OUTPUT
 
     - name: Upload Firmware to Artifacts
       uses: actions/upload-artifact@v4
       if: steps.compile.outputs.compile == 'success'
       with:
-        name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}
+        name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-run-${{ github.run_number }}
         path: openwrt/bin
 
     - name: Publish GitHub Release
       uses: softprops/action-gh-release@v2
       if: steps.compile.outputs.compile == 'success' && !cancelled()
       with:
-        name: ImmortalWrt Brume 3 (GL-MT5000) ${{ github.event.inputs.branch }} (${{ steps.compile.outputs.file-date }})
-        tag_name: gl-mt5000-${{ github.event.inputs.branch }}-${{ steps.compile.outputs.file-date }}-${{ github.run_number }}
+        name: ImmortalWrt Brume 3 (GL-MT5000) ${{ github.event.inputs.branch }} (Run #${{ github.run_number }})
+        tag_name: gl-mt5000-${{ github.event.inputs.branch }}-run-${{ github.run_number }}
         prerelease: true
         body: |
           Automatisierter ImmortalWrt Build für den GL-MT5000 (Brume 3).
           - Modus: `${{ github.event.inputs.branch }}`
-          - Build-Datum: `${{ steps.compile.outputs.file-date }}`
           - GitHub Run: `#${{ github.run_number }}`
         files: |
           openwrt/bin/targets/*/*/*sysupgrade*
