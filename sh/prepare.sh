@@ -1,10 +1,11 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Absolute Path Execution (No CD Chaos)
+# Prepare Script - Absolute Path Execution & Universal Config Cleanup
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
-echo "===> Running preparation for repository: $SDK_REPO"
+SDK_BRANCH_TYPE="${INPUT_SDK_BRANCH:-main}"
+echo "===> Running preparation for repository: $SDK_REPO (Branch-Type: $SDK_BRANCH_TYPE)"
 
 # Finde das Quellverzeichnis (entweder openwrt oder immortalwrt)
 OPENWRT_DIR=""
@@ -60,7 +61,7 @@ else
     touch "$OPENWRT_DIR/.config"
 fi
 
-# 4. Feeds aktualisieren und installieren (EXPLIZIT ÜBER PFAD, ohne unvorhersehbares cd)
+# 4. Feeds aktualisieren und installieren
 echo "===> Updating and installing feeds..."
 cd "$OPENWRT_DIR" && ./scripts/feeds update -a && ./scripts/feeds install -a
 if [ $? -ne 0 ]; then
@@ -68,7 +69,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 5. Zirkuläre Feeds / Kconfig-Schleifen eliminieren (inkl. Weechat)
+# 5. Zirkuläre Feeds / Kconfig-Schleifen eliminieren (inkl. Weechat, qt5, squeezelite)
 echo "===> Removing problematic feed packages causing Kconfig loops..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
@@ -141,8 +142,8 @@ config interface 'wan'
 	option proto 'dhcp'
 EOF
 
-# 8. Konfiguration abschließen mit olddefconfig
-echo "===> Finalizing configuration with olddefconfig..."
+# 8. Konfiguration absolut non-interaktiv bereinigen und abschließen (räumt veraltete Optionen auf)
+echo "===> Cleaning up and finalizing configuration with olddefconfig..."
 yes "" | make olddefconfig
 
 # 9. Kontrolle
