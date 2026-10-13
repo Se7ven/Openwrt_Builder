@@ -1,21 +1,29 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - DTS Injection, Config & Target Force
+# Prepare Script - DTS Injection, Config, Feeds & Target Force
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 echo "===> Running preparation for repository: $SDK_REPO"
 
-# 1. DTS-Injektion (aus board/ oder target/)
+# 1. DTS-Injektion aus dem board/-Ordner
 if [ -d "board/target/linux/mediatek/dts" ]; then
-    echo "===> Injecting custom DTS files from board/..."
+    echo "===> Injecting custom DTS files for GL-MT5000..."
     mkdir -p openwrt/target/linux/mediatek/dts
     cp -rf board/target/linux/mediatek/dts/* openwrt/target/linux/mediatek/dts/
-elif [ -d "target/linux/mediatek/dts" ]; then
-    echo "===> DTS files already in place."
+else
+    echo "===> FEHLER: DTS-Ordner board/target/linux/mediatek/dts nicht gefunden!"
+    exit 1
 fi
 
-# 2. Richtige Config-Datei aus dem config/-Ordner (oder Root) anhand der Auswahl kopieren
+# 2. filogic.mk injizieren (Board-Definitionen für GL-MT5000)
+if [ -f "board/target/linux/mediatek/image/filogic.mk" ]; then
+    echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
+    mkdir -p openwrt/target/linux/mediatek/image
+    cp -f board/target/linux/mediatek/image/filogic.mk openwrt/target/linux/mediatek/image/
+fi
+
+# 3. Richtige Config-Datei aus dem config/-Ordner (oder Root) anhand der Auswahl kopieren
 CONFIG_FILE=""
 if [ "$SDK_REPO" = "openwrt" ]; then
     if [ -f "config/mt5000.config" ]; then
@@ -39,16 +47,21 @@ else
     touch openwrt/.config
 fi
 
-# 3. Ins openwrt-Verzeichnis wechseln
+# 4. Ins openwrt-Verzeichnis wechseln
 cd openwrt || exit 1
 
-# 3. Zirkuläre Feeds / Kconfig-Schleifen eliminieren
+# 5. Feeds aktualisieren und installieren (hier ist das Skript im openwrt-Ordner!)
+echo "===> Updating and installing feeds..."
+./scripts/feeds update -a
+./scripts/feeds install -a
+
+# 6. Zirkuläre Feeds / Kconfig-Schleifen eliminieren
 echo "===> Removing problematic feed packages causing Kconfig loops..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
 rm -rf tmp/.config-package.in 2>/dev/null || true
 
-# 4. Prüfen, ob .config existiert; falls nicht, einmalig erstellen
+# 7. Prüfen, ob .config existiert; falls nicht, einmalig erstellen
 if [ ! -f .config ] || [ ! -s .config ]; then
     echo "===> .config existiert noch nicht oder ist leer. Erzeuge Basiskonfiguration via make defconfig..."
     make defconfig
@@ -66,11 +79,9 @@ while [ ! -s .config ]; do
     fi
 done
 
-# 5. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
+# 8. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
 echo "===> Forcing GL-MT5000 target configuration in .config..."
 
-# WICHTIG: Alle bestehenden Targets, Subtargets und Devices restlos entfernen,
-# damit es zu keinem "choice state override"-Konflikt kommt
 sed -i '/CONFIG_TARGET_BOARD/d' .config
 sed -i '/CONFIG_TARGET_SUBTARGET/d' .config
 sed -i '/CONFIG_TARGET_IT/d' .config
@@ -80,18 +91,17 @@ sed -i '/CONFIG_TARGET_mediatek/d' .config
 sed -i '/CONFIG_TARGET_x86/d' .config
 sed -i '/CONFIG_TARGET_armvirt/d' .config
 
-# Korrekte Key-Definition mit Großbuchstaben anhängen
 cat << 'EOF' >> .config
 CONFIG_TARGET_mediatek=y
 CONFIG_TARGET_mediatek_filogic=y
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
-# 6. Konfiguration stabil abschließen mit olddefconfig (kein Broken Pipe mehr)
+# 9. Konfiguration stabil abschließen mit olddefconfig
 echo "===> Finalizing configuration with olddefconfig..."
 make olddefconfig > /dev/null 2>&1 || true
 
-# 7. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
+# 10. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
 echo "===> Verifiziere aktives Device in .config:"
 grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
 
