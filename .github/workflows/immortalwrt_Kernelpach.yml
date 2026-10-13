@@ -49,8 +49,13 @@ jobs:
           BRANCH="openwrt-25.12"
         fi
         
-        git clone --branch "$BRANCH" --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
-        echo "===> Cloned branch: $BRANCH"
+        echo "===> Cloning ImmortalWrt repository..."
+        git clone https://github.com/immortalwrt/immortalwrt.git openwrt
+        cd openwrt
+        
+        echo "===> Checking out branch: $BRANCH"
+        git checkout "$BRANCH" || git checkout -b "$BRANCH" origin/"$BRANCH"
+        cd ..
         
         mkdir -p openwrt/custom_files
         [ -d "custom_files" ] && cp -rf custom_files/* openwrt/custom_files/ || true
@@ -74,6 +79,10 @@ jobs:
       run: |
         cd openwrt
         [ -f ../config/immortalwrt.conf ] && cp -f ../config/immortalwrt.conf .config
+        
+        # Übergeben des aktuellen Branches als Umgebungsvariable für bedingte Patches
+        export BUILD_BRANCH="${{ github.event.inputs.branch }}"
+        
         [ -f ../sh/scripts-part2.1.sh ] && chmod +x ../sh/scripts-part2.1.sh && ../sh/scripts-part2.1.sh
         make defconfig
 
