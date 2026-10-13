@@ -7,10 +7,11 @@ TARGET_BRANCH="${BUILD_BRANCH:-openwrt-25.12}"
 echo "===> Running Part 2.1 script for branch: $TARGET_BRANCH"
 
 # 1. DTS-Injektion (wird für beide Branches benötigt)
-CUSTOM_BOARD_DIR="../board/target" # Passe den Pfad an, falls er bei dir anders liegt (oder custom_files)
-if [ -d "custom_files/target/linux/mediatek/dts" ]; then
+if [ -d "../board/target/linux/mediatek/dts" ]; then
     echo "===> Injecting custom DTS files for GL-MT5000..."
-    cp -rf custom_files/target/linux/mediatek/dts/* target/linux/mediatek/dts/
+    cp -rf ../board/target/linux/mediatek/dts/* target/linux/mediatek/dts/
+else
+    echo "===> FEHLER: DTS-Ordner ../board/target/linux/mediatek/dts nicht gefunden!"
 fi
 
 # 2. Bedingte Patch-Anwendung (nur für den stabilen 25.12 / Kernel 6.12 Zweig)
