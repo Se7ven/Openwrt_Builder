@@ -9,6 +9,7 @@ echo "===> Running preparation for repository: $SDK_REPO"
 # 1. DTS-Injektion (aus board/ oder target/)
 if [ -d "board/target/linux/mediatek/dts" ]; then
     echo "===> Injecting custom DTS files from board/..."
+    mkdir -p openwrt/target/linux/mediatek/dts
     cp -rf board/target/linux/mediatek/dts/* openwrt/target/linux/mediatek/dts/
 elif [ -d "target/linux/mediatek/dts" ]; then
     echo "===> DTS files already in place."
