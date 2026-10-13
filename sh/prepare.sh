@@ -141,7 +141,7 @@ EOF
 
 # 8. Konfiguration abschließen mit olddefconfig
 echo "===> Finalizing configuration with olddefconfig..."
-make olddefconfig > /dev/null 2>&1 || true
+yes "" | make olddefconfig
 
 # 9. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
