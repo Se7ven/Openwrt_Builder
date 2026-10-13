@@ -68,10 +68,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 5. Zirkuläre Feeds / Kconfig-Schleifen eliminieren
+# 5. Zirkuläre Feeds / Kconfig-Schleifen eliminieren (inkl. Weechat)
 echo "===> Removing problematic feed packages causing Kconfig loops..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
+rm -rf feeds/luci/applications/luci-app-weechat 2>/dev/null || true
+rm -rf feeds/packages/utils/weechat 2>/dev/null || true
 rm -rf tmp/.config-package.in 2>/dev/null || true
 
 # 6. Basiskonfiguration erzeugen, falls .config leer ist
