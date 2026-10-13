@@ -43,6 +43,7 @@ jobs:
 
       - name: Start Compilation
         run: |
+          cd openwrt
           make -j$(nproc)
 
       - name: Rename Firmware Images
