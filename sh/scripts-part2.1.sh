@@ -7,18 +7,15 @@ echo "Starte Part 2.1 fuer Kernel 6.12..."
 
 # --- 1. Zusaetzliche Kernel-Patches in patches-6.12 injizieren ---
 PATCH_DIR="target/linux/mediatek/patches-6.12"
-# Wir suchen direkt im Parent-Verzeichnis, wo das Repo ausgecheckt ist (z.B. ../patches)
 SRC_PATCH_DIR="../patches"
 
-if [ -d "$PATCH_DIR" ]; then
-    if [ -d "$SRC_PATCH_DIR" ]; then
-        cp -f "$SRC_PATCH_DIR"/*.patch "$PATCH_DIR/"
-        echo "Zusaetzliche Patches erfolgreich aus $SRC_PATCH_DIR in $PATCH_DIR kopiert."
-    else
-        echo "Hinweis: Quell-Verzeichnis $SRC_PATCH_DIR nicht gefunden."
-    fi
+if [ -d "$SRC_PATCH_DIR" ]; then
+    # Erstelle das Zielverzeichnis automatisch, falls es noch nicht existiert
+    mkdir -p "$PATCH_DIR"
+    cp -f "$SRC_PATCH_DIR"/*.patch "$PATCH_DIR/"
+    echo "Zusaetzliche Patches erfolgreich nach $PATCH_DIR kopiert."
 else
-    echo "Hinweis: Ziel-Patch-Verzeichnis $PATCH_DIR nicht gefunden."
+    echo "Hinweis: Quell-Verzeichnis $SRC_PATCH_DIR nicht gefunden."
 fi
 
 # --- 2. Board-Definitionen & DTS fuer GL-MT5000 injizieren ---
