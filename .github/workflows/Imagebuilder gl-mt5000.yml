@@ -1,4 +1,34 @@
-- name: Clone Sources
+name: Imagebuilder gl-mt5000
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_repo:
+        description: 'Distribution wählen'
+        required: true
+        default: 'immortalwrt'
+        type: choice
+        options:
+          - immortalwrt
+          - openwrt
+      sdk_branch:
+        description: 'Branch / Version wählen'
+        required: true
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - stable
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Clone Sources
         env:
           INPUT_SDK_REPO: ${{ inputs.sdk_repo }}
           INPUT_SDK_BRANCH: ${{ inputs.sdk_branch }}
@@ -23,3 +53,9 @@
           INPUT_SDK_BRANCH: ${{ inputs.sdk_branch }}
         run: |
           bash ./sh/finalize.sh
+
+      - name: Upload Firmware Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gl-mt5000-firmware-${{ inputs.sdk_repo }}-${{ inputs.sdk_branch }}
+          path: openwrt/bin/targets/mediatek/filogic/*-gl-mt5000-*
