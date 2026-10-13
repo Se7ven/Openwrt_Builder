@@ -15,4 +15,17 @@ else
     exit 1
 fi
 
+# 2. Target-Konfiguration für GL-MT5000 erzwingen (Überschreiben verhindern)
+echo "===> Forcing GL-MT5000 target configuration in .config..."
+sed -i '/CONFIG_TARGET_BOARD/d' .config
+sed -i '/CONFIG_TARGET_SUBTARGET/d' .config
+sed -i '/CONFIG_TARGET_DEVICE_mediatek_filogic/d' .config
+
+echo 'CONFIG_TARGET_mediatek=y' >> .config
+echo 'CONFIG_TARGET_mediatek_filogic=y' >> .config
+echo 'CONFIG_TARGET_DEVICE_mediatek_filogic_device_gl-mt5000=y' >> .config
+
+# Konfiguration final aktualisieren, damit das Target greift
+make defconfig
+
 echo "===> Part 2.1 script completed successfully."
