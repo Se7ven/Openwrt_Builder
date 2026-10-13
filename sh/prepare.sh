@@ -6,13 +6,22 @@
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 echo "===> Running preparation for repository: $SDK_REPO"
 
-OPENWRT_DIR="openwrt"
-if [ ! -d "$OPENWRT_DIR" ]; then
-    echo "===> FEHLER: Verzeichnis $OPENWRT_DIR existiert nicht!"
-    exit 1
+# Flexibles Erkennen des OpenWrt/ImmortalWrt-Ordners
+OPENWRT_DIR=""
+if [ -d "openwrt" ]; then
+    OPENWRT_DIR="openwrt"
+elif [ -d "immortalwrt" ]; then
+    OPENWRT_DIR="immortalwrt"
+else
+    # Falls kein Ordner da ist, legen wir openwrt an und klonen zur Not lokal
+    echo "===> Kein Quellverzeichnis gefunden, erstelle openwrt..."
+    mkdir -p openwrt
+    OPENWRT_DIR="openwrt"
 fi
 
-# 1. DTS-Injektion aus dem board/-Ordner (vom Root aus)
+echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
+
+# 1. DTS-Injektion aus dem board/-Ordner
 if [ -d "board/target/linux/mediatek/dts" ]; then
     echo "===> Injecting custom DTS files for GL-MT5000..."
     mkdir -p "$OPENWRT_DIR/target/linux/mediatek/dts"
@@ -53,10 +62,10 @@ else
     touch "$OPENWRT_DIR/.config"
 fi
 
-# 4. In das openwrt-Verzeichnis wechseln für Feed- und Make-Operationen
+# 4. In das Quellverzeichnis wechseln für Feed- und Make-Operationen
 cd "$OPENWRT_DIR" || exit 1
 
-# 5. Feeds aktualisieren und installieren (jetzt im korrekten openwrt-Verzeichnis)
+# 5. Feeds aktualisieren und installieren
 echo "===> Updating and installing feeds..."
 ./scripts/feeds update -a
 ./scripts/feeds install -a
