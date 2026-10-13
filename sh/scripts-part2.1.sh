@@ -1,40 +1,26 @@
 #!/bin/bash
 # =================================================================
-# Custom Script Part 2.1 (ImmortalWrt GL-MT5000 Injektions-Skript)
+# Custom Part 2.1 Script for GL-MT5000 (Brume 3) Build
 # =================================================================
 
-echo "Starte Part 2.1 fuer Kernel 6.12..."
+echo "===> Injecting custom board files and DTS for GL-MT5000..."
 
-# --- 1. Zusaetzliche Kernel-Patches in patches-6.12 injizieren ---
-PATCH_DIR="target/linux/mediatek/patches-6.12"
-SRC_PATCH_DIR="../patches"
+# Pfad zu deinen benutzerdefinierten Board-Dateien im Repository
+CUSTOM_BOARD_DIR="../board/target"
 
-if [ -d "$SRC_PATCH_DIR" ]; then
-    # Erstelle das Zielverzeichnis automatisch, falls es noch nicht existiert
-    mkdir -p "$PATCH_DIR"
-    cp -f "$SRC_PATCH_DIR"/*.patch "$PATCH_DIR/"
-    echo "Zusaetzliche Patches erfolgreich nach $PATCH_DIR kopiert."
+if [ -d "$CUSTOM_BOARD_DIR" ]; then
+    echo "===> Found custom board directory: $CUSTOM_BOARD_DIR"
+    
+    # Kopiere die DTS-Dateien in den Kernel-Quellbaum von ImmortalWrt
+    if [ -d "$CUSTOM_BOARD_DIR/linux/mediatek/dts" ]; then
+        echo "===> Copying custom DTS files..."
+        cp -rf "$CUSTOM_BOARD_DIR/linux/mediatek/dts/"* target/linux/mediatek/dts/
+    fi
+    
+    # Falls weitere Konfigurationen oder Patches im Board-Ordner liegen
+    # cp -rf "$CUSTOM_BOARD_DIR/"* target/
 else
-    echo "Hinweis: Quell-Verzeichnis $SRC_PATCH_DIR nicht gefunden."
+    echo "===> Warning: Custom board directory '$CUSTOM_BOARD_DIR' not found!"
 fi
 
-# --- 2. Board-Definitionen & DTS fuer GL-MT5000 injizieren ---
-BOARD_DIR="../board/target"
-if [ -d "$BOARD_DIR" ]; then
-    cp -rf "$BOARD_DIR"/* target/
-    echo "Board-Definitionen und DTS-Dateien erfolgreich in den Quellbaum kopiert."
-else
-    echo "Hinweis: Kein Board-Verzeichnis unter ../board/target gefunden."
-fi
-
-# --- 3. Standard-LAN-IP auf 192.168.100.1 setzen ---
-NET_GEN="package/base-files/files/bin/config_generate"
-if [ -f "$NET_GEN" ]; then
-    sed -i 's/192.168.1.1/192.168.100.1/g' "$NET_GEN"
-    echo "LAN-IP erfolgreich angepasst."
-else
-    find . -path "*/base-files/files/bin/config_generate" -exec sed -i 's/192.168.1.1/192.168.100.1/g' {} +
-    echo "LAN-IP ueber alternativen Pfad angepasst."
-fi
-
-echo "Part 2.1 erfolgreich abgeschlossen."
+echo "===> Part 2.1 script completed successfully."
