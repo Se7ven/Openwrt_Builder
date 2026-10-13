@@ -3,7 +3,7 @@
 # Custom Script Part 2.1 (ImmortalWrt GL-MT5000 Injektions-Skript)
 # =================================================================
 
-echo "Starte Part 2.1: Kernel-Version auf 6.18.44 festnageln, Patches und Board-Dateien injizieren..."
+echo "Starte Part 2.1: Kernel-Version auf 6.18.25 festnageln, Patches und Board-Dateien injizieren..."
 
 # --- 0a. Kernel-Patch-Version im Mediatk-Target auf 6.18 setzen ---
 MEDIATEK_MAKEFILE="target/linux/mediatek/Makefile"
@@ -14,22 +14,17 @@ else
     echo "Warnung: $MEDIATEK_MAKEFILE nicht gefunden!"
 fi
 
-# --- 0b. Exakte Kernel-Version 6.18.44 in include/kernel-6.18 erzwingen ---
+# --- 0b. Exakte Kernel-Version 6.18.25 in include/kernel-6.18 erzwingen ---
 KERNEL_INCLUDE="include/kernel-6.18"
 if [ -f "$KERNEL_INCLUDE" ]; then
-    echo "Passe LINUX_VERSION in $KERNEL_INCLUDE auf 6.18.44 an..."
-    sed -i 's/LINUX_VERSION:=.*/LINUX_VERSION:=6.18.44/g' "$KERNEL_INCLUDE"
-    
-    # Optional: Den Hash (LINUX_KERNEL_HASH) für 6.18.44 anpassen, falls nötig, 
-    # damit das Build-System nicht über eine falsche Prüfsumme stolpert.
-    # (Falls der Hash nicht bekannt ist, lädt er es zur Not herunter, vergleicht aber den SHA256)
+    echo "Passe LINUX_VERSION in $KERNEL_INCLUDE auf 6.18.25 an..."
+    sed -i 's/LINUX_VERSION:=.*/LINUX_VERSION:=6.18.25/g' "$KERNEL_INCLUDE"
 else
     echo "Hinweis: $KERNEL_INCLUDE nicht direkt gefunden, suche in include/..."
-    # Alternativer Suchpfad falls die Datei leicht anders heißt
     FOUND_KERNEL_INC=$(find include -maxdepth 1 -name "kernel-6.18*")
     if [ -n "$FOUND_KERNEL_INC" ]; then
-        echo "Passe LINUX_VERSION in $FOUND_KERNEL_INC auf 6.18.44 an..."
-        sed -i 's/LINUX_VERSION:=.*/LINUX_VERSION:=6.18.44/g' "$FOUND_KERNEL_INC"
+        echo "Passe LINUX_VERSION in $FOUND_KERNEL_INC auf 6.18.25 an..."
+        sed -i 's/LINUX_VERSION:=.*/LINUX_VERSION:=6.18.25/g' "$FOUND_KERNEL_INC"
     fi
 fi
 
