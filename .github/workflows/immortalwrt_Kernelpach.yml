@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'ImmortalWrt Branch / Tag (z.B. openwrt-25.12 oder main)'
+        description: 'ImmortalWrt Version (z.B. openwrt-25.12 für Kernel 6.12 oder main für Kernel 6.18.x)'
         required: true
         default: 'openwrt-25.12'
       ssh:
@@ -49,16 +49,16 @@ jobs:
           BRANCH="openwrt-25.12"
         fi
         
-        if [ "$BRANCH" = "main" ]; then
-          echo "===> Ziehe den Standard-Zweig ohne Branch-Angabe (führt zu Kernel 6.18.x)"
-          git clone --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
-        else
-          echo "===> Ziehe explizit den Branch: $BRANCH (führt zu Kernel 6.12)"
-          git clone --branch "$BRANCH" --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
-        fi
+        git clone --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
         
-        echo "===> Setze Symlink für custom_files"
-        ln -s /home/runner/work/Openwrt_Builder/Openwrt_Builder /home/runner/work/Openwrt_Builder/openwrt/custom_files || true
+        if [ "$BRANCH" = "main" ]; then
+          echo "===> Setup für Kernel 6.18.x (Symlink)"
+          ln -s /home/runner/work/Openwrt_Builder/Openwrt_Builder /home/runner/work/Openwrt_Builder/openwrt/custom_files || true
+        else
+          echo "===> Setup für Kernel 6.12 (Copy)"
+          mkdir -p openwrt/custom_files
+          [ -d "custom_files" ] && cp -rf custom_files/* openwrt/custom_files/ || true
+        fi
 
     - name: Load Custom Feeds (Part 1.1)
       run: |
@@ -80,7 +80,6 @@ jobs:
         cd openwrt
         [ -f ../config/immortalwrt.conf ] && cp -f ../config/immortalwrt.conf .config
         
-        # Übergeben des aktuellen Branches als Umgebungsvariable für bedingte Patches
         export BUILD_BRANCH="${{ github.event.inputs.branch }}"
         
         [ -f ../sh/scripts-part2.1.sh ] && chmod +x ../sh/scripts-part2.1.sh && ../sh/scripts-part2.1.sh
@@ -92,19 +91,18 @@ jobs:
         cd openwrt
         make -j$(nproc) || make -j1 V=s
         
-        # Setze die Variablen für nachfolgende Schritte
         echo "compile=success" >> $GITHUB_OUTPUT
         echo "file-date=$(date +'\%Y.\%m.\%d')" >> $GITHUB_OUTPUT
         echo "device-name=gl-mt5000" >> $GITHUB_OUTPUT
 
-    - name: bin-Verzeichnis als Artefakt hochladen
+    - name: Upload Firmware to Artifacts
       uses: actions/upload-artifact@v4
       if: steps.compile.outputs.compile == 'success'
       with:
         name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}
         path: openwrt/bin
 
-    - name: Release erstellen
+    - name: Publish GitHub Release
       uses: softprops/action-gh-release@v2
       if: steps.compile.outputs.compile == 'success' && !cancelled()
       with:
@@ -113,7 +111,7 @@ jobs:
         prerelease: true
         body: |
           Automatisierter ImmortalWrt Build für den GL-MT5000 (Brume 3).
-          - Verwendeter Branch: `${{ github.event.inputs.branch }}`
+          - Modus: `${{ github.event.inputs.branch }}`
           - Build-Datum: `${{ steps.compile.outputs.file-date }}`
           - GitHub Run: `#${{ github.run_number }}`
         files: |
