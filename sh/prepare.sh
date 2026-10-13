@@ -1,42 +1,42 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - DTS Injection, Config, Feeds & Target Force
+# Prepare Script - Absolute Path Execution (No CD Chaos)
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 echo "===> Running preparation for repository: $SDK_REPO"
 
-# Flexibles Erkennen oder Erstellen des Quellverzeichnisses
+# Finde das Quellverzeichnis (entweder openwrt oder immortalwrt)
 OPENWRT_DIR=""
 if [ -d "openwrt" ]; then
     OPENWRT_DIR="openwrt"
 elif [ -d "immortalwrt" ]; then
     OPENWRT_DIR="immortalwrt"
 else
-    echo "===> Quellverzeichnis nicht gefunden, erstelle openwrt..."
-    mkdir -p openwrt
-    OPENWRT_DIR="openwrt"
+    echo "===> FEHLER: Weder 'openwrt' noch 'immortalwrt' Verzeichnis gefunden!"
+    exit 1
 fi
 
 echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
 
-# 1. DTS-Injektion aus dem board/-Ordner
+# 1. DTS-Injektion
 if [ -d "board/target/linux/mediatek/dts" ]; then
     echo "===> Injecting custom DTS files for GL-MT5000..."
     mkdir -p "$OPENWRT_DIR/target/linux/mediatek/dts"
     cp -rf board/target/linux/mediatek/dts/* "$OPENWRT_DIR/target/linux/mediatek/dts/"
 else
-    echo "===> WARNUNG: DTS-Ordner board/target/linux/mediatek/dts nicht gefunden!"
+    echo "===> FEHLER: DTS-Ordner board/target/linux/mediatek/dts nicht gefunden!"
+    exit 1
 fi
 
-# 2. filogic.mk injizieren (Board-Definitionen für GL-MT5000)
+# 2. filogic.mk injizieren
 if [ -f "board/target/linux/mediatek/image/filogic.mk" ]; then
     echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
     mkdir -p "$OPENWRT_DIR/target/linux/mediatek/image"
     cp -f board/target/linux/mediatek/image/filogic.mk "$OPENWRT_DIR/target/linux/mediatek/image/"
 fi
 
-# 3. Richtige Config-Datei ermitteln und nach .config kopieren
+# 3. Config-Datei ermitteln und kopieren
 CONFIG_FILE=""
 if [ "$SDK_REPO" = "openwrt" ]; then
     if [ -f "config/mt5000.config" ]; then
@@ -60,12 +60,13 @@ else
     touch "$OPENWRT_DIR/.config"
 fi
 
-# 4. In das Verzeichnis wechseln, um Feeds & Makefiles zu initialisieren
-cd "$OPENWRT_DIR" || exit 1
-
+# 4. Feeds aktualisieren und installieren (EXPLIZIT ÜBER PFAD, ohne unvorhersehbares cd)
 echo "===> Updating and installing feeds..."
-./scripts/feeds update -a
-./scripts/feeds install -a
+cd "$OPENWRT_DIR" && ./scripts/feeds update -a && ./scripts/feeds install -a
+if [ $? -ne 0 ]; then
+    echo "===> FEHLER beim Aktualisieren/Installieren der Feeds!"
+    exit 1
+fi
 
 # 5. Zirkuläre Feeds / Kconfig-Schleifen eliminieren
 echo "===> Removing problematic feed packages causing Kconfig loops..."
@@ -73,14 +74,13 @@ rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
 rm -rf tmp/.config-package.in 2>/dev/null || true
 
-# 6. Prüfen, ob .config existiert; falls nicht, einmalig erstellen
+# 6. Basiskonfiguration erzeugen, falls .config leer ist
 if [ ! -f .config ] || [ ! -s .config ]; then
-    echo "===> .config existiert noch nicht oder ist leer. Erzeuge Basiskonfiguration via make defconfig..."
+    echo "===> .config ist leer. Erzeuge Basiskonfiguration via make defconfig..."
     make defconfig
 fi
 
 # Warten, bis .config bereit ist
-echo "===> Stelle sicher, dass .config bereit ist..."
 TIMEOUT=30
 while [ ! -s .config ]; do
     sleep 1
@@ -91,7 +91,7 @@ while [ ! -s .config ]; do
     fi
 done
 
-# 7. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
+# 7. Target-Konfiguration für GL-MT5000 erzwingen
 echo "===> Forcing GL-MT5000 target configuration in .config..."
 
 sed -i '/CONFIG_TARGET_BOARD/d' .config
@@ -109,12 +109,15 @@ CONFIG_TARGET_mediatek_filogic=y
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
-# 8. Konfiguration stabil abschließen mit olddefconfig
+# 8. Konfiguration abschließen mit olddefconfig
 echo "===> Finalizing configuration with olddefconfig..."
 make olddefconfig > /dev/null 2>&1 || true
 
-# 9. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
+# 9. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
 grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
+
+# Zurück ins Root-Verzeichnis wechseln, damit der Schritt sauber abschließt
+cd ..
 
 echo "===> Preparation completed successfully."
