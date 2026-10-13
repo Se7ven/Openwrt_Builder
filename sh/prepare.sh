@@ -6,58 +6,52 @@
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 echo "===> Running preparation for repository: $SDK_REPO"
 
-# 1. DTS-Injektion aus dem lokalen board-Ordner
+# 1. DTS-Injektion (aus board/ oder target/)
 if [ -d "board/target/linux/mediatek/dts" ]; then
-    echo "===> Injecting custom DTS files for GL-MT5000..."
+    echo "===> Injecting custom DTS files from board/..."
     cp -rf board/target/linux/mediatek/dts/* openwrt/target/linux/mediatek/dts/
-else
-    echo "===> FEHLER: DTS-Ordner board/target/linux/mediatek/dts nicht gefunden!"
-    exit 1
+elif [ -d "target/linux/mediatek/dts" ]; then
+    echo "===> DTS files already in place."
 fi
 
-# Optional: filogic.mk, falls vorhanden
-if [ -f "board/target/linux/mediatek/image/filogic.mk" ]; then
-    echo "===> Injecting custom filogic.mk..."
-    cp -f board/target/linux/mediatek/image/filogic.mk openwrt/target/linux/mediatek/image/
+# 2. Richtige Config-Datei aus dem config/-Ordner (oder Root) anhand der Auswahl kopieren
+CONFIG_FILE=""
+if [ "$SDK_REPO" = "openwrt" ]; then
+    if [ -f "config/mt5000.config" ]; then
+        CONFIG_FILE="config/mt5000.config"
+    elif [ -f "mt5000.config" ]; then
+        CONFIG_FILE="mt5000.config"
+    fi
+else
+    if [ -f "config/immortalwrt.config" ]; then
+        CONFIG_FILE="config/immortalwrt.config"
+    elif [ -f "immortalwrt.config" ]; then
+        CONFIG_FILE="immortalwrt.config"
+    fi
 fi
 
-# 2. Richtige Config-Datei anhand der Auswahl in das openwrt-Verzeichnis kopieren
-if [ "$SDK_REPO" = "openwrt" ] && [ -f "board/mt5000.config" ]; then
-    echo "===> Applying OpenWrt configuration (mt5000.config)..."
-    cp board/mt5000.config openwrt/.config
-elif [ -f "board/immortalwrt.config" ]; then
-    echo "===> Applying ImmortalWrt configuration (immortalwrt.config)..."
-    cp board/immortalwrt.config openwrt/.config
+if [ -n "$CONFIG_FILE" ]; then
+    echo "===> Applying configuration: $CONFIG_FILE"
+    cp "$CONFIG_FILE" openwrt/.config
 else
-    echo "===> WARNUNG: Keine passende Config-Datei im board/-Ordner gefunden!"
+    echo "===> WARNUNG: Keine passende Config-Datei gefunden! Erstelle leere .config"
     touch openwrt/.config
 fi
 
-# 3. Ins openwrt-Verzeichnis wechseln, da ab hier dort gearbeitet wird
+# 3. Ins openwrt-Verzeichnis wechseln
 cd openwrt || exit 1
 
-# 4. Zirkuläre Feeds / Kconfig-Schleifen eliminieren (falls vorhanden)
+# 4. Zirkuläre Feeds / Kconfig-Schleifen eliminieren
 echo "===> Removing problematic feed packages causing Kconfig loops..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
 rm -rf tmp/.config-package.in 2>/dev/null || true
 
-# 5. Warten, bis .config bereit ist
-if [ ! -f .config ]; then
-    echo "===> .config existiert noch nicht. Erzeuge Basiskonfiguration via make defconfig..."
+# 5. Basiskonfiguration erzeugen, falls .config leer ist
+if [ ! -s .config ]; then
+    echo "===> .config ist leer. Erzeuge Basiskonfiguration via make defconfig..."
     make defconfig
 fi
-
-echo "===> Stelle sicher, dass .config bereit ist..."
-TIMEOUT=30
-while [ ! -s .config ]; do
-    sleep 1
-    TIMEOUT=$((TIMEOUT - 1))
-    if [ $TIMEOUT -le 0 ]; then
-        echo "===> FEHLER: Zeitüberschreitung beim Warten auf .config!"
-        exit 1
-    fi
-done
 
 # 6. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
 echo "===> Forcing GL-MT5000 target configuration in .config..."
@@ -71,7 +65,6 @@ sed -i '/CONFIG_TARGET_mediatek/d' .config
 sed -i '/CONFIG_TARGET_x86/d' .config
 sed -i '/CONFIG_TARGET_armvirt/d' .config
 
-# Korrekte Key-Definition für den GL-MT5000 anhängen
 cat << 'EOF' >> .config
 CONFIG_TARGET_mediatek=y
 CONFIG_TARGET_mediatek_filogic=y
@@ -81,7 +74,7 @@ EOF
 # 7. Konfiguration final auflösen
 make defconfig
 
-# 8. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
+# 8. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
 grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
 
