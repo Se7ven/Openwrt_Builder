@@ -41,19 +41,19 @@ fi
 # 3. Ins openwrt-Verzeichnis wechseln
 cd openwrt || exit 1
 
-# 4. Zirkuläre Feeds / Kconfig-Schleifen eliminieren
+# 3. Zirkuläre Feeds / Kconfig-Schleifen eliminieren
 echo "===> Removing problematic feed packages causing Kconfig loops..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
 rm -rf tmp/.config-package.in 2>/dev/null || true
 
-# 5. Prüfen, ob .config existiert; falls nicht, einmalig erstellen
-if [ ! -f .config ]; then
-    echo "===> .config existiert noch nicht. Erzeuge Basiskonfiguration via make defconfig..."
+# 4. Prüfen, ob .config existiert; falls nicht, einmalig erstellen
+if [ ! -f .config ] || [ ! -s .config ]; then
+    echo "===> .config existiert noch nicht oder ist leer. Erzeuge Basiskonfiguration via make defconfig..."
     make defconfig
 fi
 
-# 6. Warten, bis .config bereit ist
+# Warten, bis .config bereit ist
 echo "===> Stelle sicher, dass .config bereit ist..."
 TIMEOUT=30
 while [ ! -s .config ]; do
@@ -65,10 +65,10 @@ while [ ! -s .config ]; do
     fi
 done
 
-# 7. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
+# 5. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
 echo "===> Forcing GL-MT5000 target configuration in .config..."
 
-# 8. WICHTIG: Alle bestehenden Targets, Subtargets und Devices restlos entfernen,
+# WICHTIG: Alle bestehenden Targets, Subtargets und Devices restlos entfernen,
 # damit es zu keinem "choice state override"-Konflikt kommt
 sed -i '/CONFIG_TARGET_BOARD/d' .config
 sed -i '/CONFIG_TARGET_SUBTARGET/d' .config
@@ -79,15 +79,16 @@ sed -i '/CONFIG_TARGET_mediatek/d' .config
 sed -i '/CONFIG_TARGET_x86/d' .config
 sed -i '/CONFIG_TARGET_armvirt/d' .config
 
-# 9. Korrekte Key-Definition mit Großbuchstaben anhängen
+# Korrekte Key-Definition mit Großbuchstaben anhängen
 cat << 'EOF' >> .config
 CONFIG_TARGET_mediatek=y
 CONFIG_TARGET_mediatek_filogic=y
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
-# 6. Konfiguration final auflösen
-make defconfig
+# 6. Konfiguration stabil abschließen (nutzt oldconfig, um erzwungene Werte zu bewahren)
+echo "===> Finalizing configuration with oldconfig..."
+yes '' | make oldconfig > /dev/null 2>&1 || true
 
 # 7. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
 echo "===> Verifiziere aktives Device in .config:"
