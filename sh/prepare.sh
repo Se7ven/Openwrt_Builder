@@ -6,17 +6,10 @@
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 echo "===> Running preparation for repository: $SDK_REPO"
 
-# Flexibles Erkennen des OpenWrt/ImmortalWrt-Ordners
-OPENWRT_DIR=""
-if [ -d "openwrt" ]; then
-    OPENWRT_DIR="openwrt"
-elif [ -d "immortalwrt" ]; then
-    OPENWRT_DIR="immortalwrt"
-else
-    # Falls kein Ordner da ist, legen wir openwrt an und klonen zur Not lokal
-    echo "===> Kein Quellverzeichnis gefunden, erstelle openwrt..."
-    mkdir -p openwrt
-    OPENWRT_DIR="openwrt"
+OPENWRT_DIR="openwrt"
+if [ ! -d "$OPENWRT_DIR" ]; then
+    echo "===> FEHLER: Verzeichnis $OPENWRT_DIR existiert nicht!"
+    exit 1
 fi
 
 echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
@@ -62,21 +55,20 @@ else
     touch "$OPENWRT_DIR/.config"
 fi
 
-# 4. In das Quellverzeichnis wechseln für Feed- und Make-Operationen
+# 4. In das openwrt-Verzeichnis wechseln, um Feeds & Makefiles zu initialisieren
 cd "$OPENWRT_DIR" || exit 1
 
-# 5. Feeds aktualisieren und installieren
 echo "===> Updating and installing feeds..."
 ./scripts/feeds update -a
 ./scripts/feeds install -a
 
-# 6. Zirkuläre Feeds / Kconfig-Schleifen eliminieren
+# 5. Zirkuläre Feeds / Kconfig-Schleifen eliminieren
 echo "===> Removing problematic feed packages causing Kconfig loops..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
 rm -rf tmp/.config-package.in 2>/dev/null || true
 
-# 7. Prüfen, ob .config existiert; falls nicht, einmalig erstellen
+# 6. Prüfen, ob .config existiert; falls nicht, einmalig erstellen
 if [ ! -f .config ] || [ ! -s .config ]; then
     echo "===> .config existiert noch nicht oder ist leer. Erzeuge Basiskonfiguration via make defconfig..."
     make defconfig
@@ -94,7 +86,7 @@ while [ ! -s .config ]; do
     fi
 done
 
-# 8. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
+# 7. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
 echo "===> Forcing GL-MT5000 target configuration in .config..."
 
 sed -i '/CONFIG_TARGET_BOARD/d' .config
@@ -112,11 +104,11 @@ CONFIG_TARGET_mediatek_filogic=y
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
-# 9. Konfiguration stabil abschließen mit olddefconfig
+# 8. Konfiguration stabil abschließen mit olddefconfig
 echo "===> Finalizing configuration with olddefconfig..."
 make olddefconfig > /dev/null 2>&1 || true
 
-# 10. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
+# 9. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
 echo "===> Verifiziere aktives Device in .config:"
 grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
 
