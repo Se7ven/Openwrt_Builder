@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - DTS Injection, Config & Target Force
+# Prepare Script - DTS Injection, Config, Network & Target Force
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -56,7 +56,34 @@ rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
 rm -rf tmp/.config-package.in 2>/dev/null || true
 
-# 6. Prüfen, ob .config existiert; falls nicht, einmalig erstellen
+# 6. Netzwerk- und Basis-Konfiguration für GL-MT5000 einbauen (IP: 192.168.100.1)
+echo "===> Konfiguriere festes Netzwerk (192.168.100.1) für GL-MT5000..."
+mkdir -p package/base-files/files/etc/config
+cat << 'EOF' > package/base-files/files/etc/config/network
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config device
+	option name 'br-lan'
+	option type 'bridge'
+	list ports 'lan1'
+	list ports 'lan2'
+
+config interface 'lan'
+	option device 'br-lan'
+	option proto 'static'
+	option ipaddr '192.168.100.1'
+	option netmask '255.255.255.0'
+
+config interface 'wan'
+	option device 'eth1'
+	option proto 'dhcp'
+EOF
+
+# 7. Prüfen, ob .config existiert; falls nicht, einmalig erstellen
 if [ ! -f .config ] || [ ! -s .config ]; then
     echo "===> .config existiert noch nicht oder ist leer. Erzeuge Basiskonfiguration via make defconfig..."
     make defconfig
@@ -74,11 +101,9 @@ while [ ! -s .config ]; do
     fi
 done
 
-# 7. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
+# 8. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
 echo "===> Forcing GL-MT5000 target configuration in .config..."
 
-# WICHTIG: Alle bestehenden Targets, Subtargets und Devices restlos entfernen,
-# damit es zu keinem "choice state override"-Konflikt kommt
 sed -i '/CONFIG_TARGET_BOARD/d' .config
 sed -i '/CONFIG_TARGET_SUBTARGET/d' .config
 sed -i '/CONFIG_TARGET_IT/d' .config
@@ -88,18 +113,17 @@ sed -i '/CONFIG_TARGET_mediatek/d' .config
 sed -i '/CONFIG_TARGET_x86/d' .config
 sed -i '/CONFIG_TARGET_armvirt/d' .config
 
-# Korrekte Key-Definition mit Großbuchstaben anhängen
 cat << 'EOF' >> .config
 CONFIG_TARGET_mediatek=y
 CONFIG_TARGET_mediatek_filogic=y
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
-# 8. Konfiguration stabil abschließen mit olddefconfig
+# 9. Konfiguration stabil abschließen mit olddefconfig
 echo "===> Finalizing configuration with olddefconfig..."
 make olddefconfig > /dev/null 2>&1 || true
 
-# 9. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
+# 10. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
 echo "===> Verifiziere aktives Device in .config:"
 grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
 
