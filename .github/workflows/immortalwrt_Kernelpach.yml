@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'ImmortalWrt Branch / Tag'
+        description: 'ImmortalWrt Branch / Tag (z.B. openwrt-25.12 oder main)'
         required: true
         default: 'openwrt-25.12'
       ssh:
@@ -42,7 +42,6 @@ jobs:
 
     - name: Clone Source Code
       run: |
-        # Nutzt den über das Input-Feld definierten Branch (Standard: openwrt-25.12)
         BRANCH="${{ github.event.inputs.branch }}"
         if [ -z "$BRANCH" ]; then
           BRANCH="openwrt-25.12"
@@ -52,7 +51,6 @@ jobs:
         echo "===> Cloned branch: $BRANCH"
         
         mkdir -p openwrt/custom_files
-        # Sauberer relativer Kopiervorgang statt fehlerhaftem absolutem Symlink
         [ -d "custom_files" ] && cp -rf custom_files/* openwrt/custom_files/ || true
 
     - name: Load Custom Feeds (Part 1.1)
@@ -73,12 +71,8 @@ jobs:
     - name: Load Custom Configuration & Scripts (Part 2.1)
       run: |
         cd openwrt
-        # Kopiere deine immortalwrt.conf als Basis-Config
         [ -f ../config/immortalwrt.conf ] && cp -f ../config/immortalwrt.conf .config
-        
-        # Führe dein Part 2.1 Skript aus (kopiert Patches und Board-Definitionen wie deine DTS)
         [ -f ../sh/scripts-part2.1.sh ] && chmod +x ../sh/scripts-part2.1.sh && ../sh/scripts-part2.1.sh
-        
         make defconfig
 
     - name: Compile Firmware
@@ -99,5 +93,5 @@ jobs:
       uses: actions/upload-artifact@v4
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: ImmortalWrt_MT5000_Firmware
+        name: ImmortalWrt_MT5000_Firmware_${{ github.event.inputs.branch }}
         path: ${{ env.FIRMWARE }}
