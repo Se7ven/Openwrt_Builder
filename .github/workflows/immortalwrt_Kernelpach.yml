@@ -119,3 +119,4 @@ jobs:
           openwrt/bin/targets/*/*/*factory*
           openwrt/bin/targets/*/*/*manifest*
           openwrt/bin/targets/*/*/*sha256sums
+          
