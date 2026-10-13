@@ -3,6 +3,8 @@
 # Custom Part 2.1 Script - Streamlined & Path Fixed
 # =================================================================
 
+set -e
+
 TARGET_BRANCH="${BUILD_BRANCH:-openwrt-25.12}"
 echo "===> Running Part 2.1 script for branch: $TARGET_BRANCH"
 
@@ -21,7 +23,25 @@ if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
     cp -f ../board/target/linux/mediatek/image/filogic.mk target/linux/mediatek/image/
 fi
 
-# 2. Target-Konfiguration für GL-MT5000 absolut sauber erzwingen
+# 2. Prüfen, ob die .config existiert; falls nicht, initial erzeugen lassen
+if [ ! -f .config ]; then
+    echo "===> .config existiert noch nicht. Erzeuge Basiskonfiguration via make defconfig..."
+    make defconfig
+fi
+
+# Warten/Sicherstellen, dass .config vorhanden und nicht leer ist
+echo "===> Stelle sicher, dass .config bereit ist..."
+TIMEOUT=30
+while [ ! -s .config ]; do
+    sleep 1
+    TIMEOUT=$((TIMEOUT - 1))
+    if [ $TIMEOUT -le 0 ]; then
+        echo "===> FEHLER: Zeitüberschreitung beim Warten auf .config!"
+        exit 1
+    fi
+done
+
+# 3. Target-Konfiguration für GL-MT5000 sauber erzwingen
 echo "===> Forcing GL-MT5000 target configuration in .config..."
 
 # Alte Target- und Device-Einträge komplett bereinigen, um Choice-Konflikte zu vermeiden
