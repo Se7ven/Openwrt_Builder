@@ -44,6 +44,8 @@ jobs:
       - name: Start Compilation
         run: |
           cd openwrt
+          export TERM=dumb
+          export DEBIAN_FRONTEND=noninteractive
           make -j$(nproc)
 
       - name: Rename Firmware Images
