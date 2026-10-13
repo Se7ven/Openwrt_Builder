@@ -16,31 +16,25 @@ fi
 
 # 2. Branch-spezifische Patch-Anwendung
 if [ "$TARGET_BRANCH" = "openwrt-25.12" ]; then
-    echo "===> Branch is openwrt-25.12: Applying custom kernel 6.12 patches..."
+    echo "===> Branch is openwrt-25.12: Injecting custom kernel 6.12 patches..."
     
-    # Wendet Patches aus dem Standard-Patchordner an (für 6.12)
+    # Kernel-Patches in den OpenWrt Patch-Ordner kopieren
     if [ -d "../patches" ]; then
-        for patch in ../patches/*.patch; do
-            if [ -f "$patch" ]; then
-                echo "Applying $patch ..."
-                patch -p1 < "$patch"
-            fi
-        done
+        echo "===> Kopiere 6.12 Kernel-Patches in den Build-Tree..."
+        mkdir -p target/linux/mediatek/patches-6.12
+        cp -f ../patches/*.patch target/linux/mediatek/patches-6.12/
     else
         echo "===> Keine Patches unter ../patches gefunden."
     fi
 
 elif [ "$TARGET_BRANCH" = "main" ]; then
-    echo "===> Branch is 'main': Applying custom kernel 6.18 patches..."
+    echo "===> Branch is 'main': Injecting custom kernel 6.18 patches..."
     
-    # Wendet Patches aus deinem speziellen 6.18-Ordner an (Achtung Schreibweise: patche618)
+    # Kernel-Patches in den OpenWrt Patch-Ordner kopieren
     if [ -d "../patche618" ]; then
-        for patch in ../patche618/*.patch; do
-            if [ -f "$patch" ]; then
-                echo "Applying $patch ..."
-                patch -p1 < "$patch"
-            fi
-        done
+        echo "===> Kopiere 6.18 Kernel-Patches in den Build-Tree..."
+        mkdir -p target/linux/mediatek/patches-6.18
+        cp -f ../patche618/*.patch target/linux/mediatek/patches-6.18/
     else
         echo "===> Keine Patches unter ../patche618 gefunden."
     fi
