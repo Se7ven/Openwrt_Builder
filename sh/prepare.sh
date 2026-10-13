@@ -148,7 +148,7 @@ echo "===> Running automated configuration sanitization and sync..."
 sed -i '/^#.*is not set$/!{/=/!d}' .config 2>/dev/null || true
 
 # Absolut non-interaktiver Durchlauf, der fehlende Defaults automatisch ergänzt
-yes "" | make olddefconfig
+make olddefconfig
 
 # 9. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
