@@ -61,11 +61,11 @@ sed -i '/CONFIG_TARGET_mediatek/d' .config
 sed -i '/CONFIG_TARGET_x86/d' .config
 sed -i '/CONFIG_TARGET_armvirt/d' .config
 
-# Deine exakte Definition anhängen
+# Korrekte Key-Definition mit Großbuchstaben anhängen
 cat << 'EOF' >> .config
 CONFIG_TARGET_mediatek=y
 CONFIG_TARGET_mediatek_filogic=y
-CONFIG_TARGET_DEVICE_mediatek_filogic_device_gl-mt5000=y
+CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
 # 6. Konfiguration final auflösen
