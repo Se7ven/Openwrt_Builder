@@ -1,114 +1,119 @@
-name: ImmortalWrt KernelPatch Builder
+name: Build immortalwrt
 
 on:
-  repository_dispatch:
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'ImmortalWrt Branch / Tag (z.B. openwrt-25.12 oder main)'
-        required: true
-        default: 'openwrt-25.12'
-      ssh:
-        description: 'SSH connection to Actions'
+      docker:
+        description: 'Docker einbinden'
         required: false
         default: 'false'
 
+permissions:
+  contents: write
+
+env:
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: ./config/mt5000.config
+  CONFIG_FILE_DOCKER: ./config/immortalwrt.config
+  DIY_P1_SH: ./sh/scripts-part1.sh
+  DIY_P2_SH: ./sh/scripts-part2.sh
+  UPLOAD_BIN_DIR: true
+  UPLOAD_FIRMWARE: true
+  UPLOAD_RELEASE: true
+  TZ: Europe/Berlin
+  GOTOOLCHAIN: path
+
 jobs:
   build:
+    name: Kompiliere GL-MT5000 Master
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Repository auschecken
+        uses: actions/checkout@v4
 
-    - name: Initialization Environment
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
-        sudo -E apt-get -y update
-        sudo -E apt-get -y install $(cat << 'EOF'
-        libncurses5-dev libncursesw5-dev zlib1g-dev gawk
-        flex patch gettext zlib1g-dev libc6-dev libssl-dev subversion
-        git unzip sharutils subversion libxml-parser-perl ocaml-nox
-        asciidoc libz-dev xsltproc libjson-perl libelf-dev libgmp-dev
-        liblzma-dev rsync cpio wget python3 python3-pip swig time
-        libfile-slurp-perl rsync g++ libtool autoconf automake autopoint
-        uuid-dev libncurses-dev gettext libtool-bin cmake gperf upx-ucl
-        EOF
-        )
-        sudo -E apt-get -y autoremove --purge
-        sudo -E apt-get clean
+      - name: Speicherplatz freigeben
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
 
-    - name: Clone Source Code
-      run: |
-        BRANCH="${{ github.event.inputs.branch }}"
-        if [ -z "$BRANCH" ]; then
-          BRANCH="openwrt-25.12"
-        fi
-        
-        git clone --branch "$BRANCH" --depth 1 https://github.com/immortalwrt/immortalwrt.git openwrt
-        echo "===> Cloned branch: $BRANCH"
-        
-        mkdir -p openwrt/custom_files
-        [ -d "custom_files" ] && cp -rf custom_files/* openwrt/custom_files/ || true
+      - name: Build-Umgebung initialisieren
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt-get update
+          sudo -E apt-get -y install dos2unix libfuse-dev build-essential libncurses5-dev gawk git libssl-dev gettext zlib1g-dev swig python3-distutils libelf-dev m4 flex bison
+          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo timedatectl set-timezone "$TZ"
+          sudo mkdir -p /workdir
+          sudo chown $USER:$GROUPS /workdir
+          echo "WORKFLOW_NAME=gl-mt5000_immortalwrt" >> $GITHUB_ENV
 
-    - name: Load Custom Feeds (Part 1.1)
-      run: |
-        cd openwrt
-        [ -f ../sh/scripts-part1.1.sh ] && chmod +x ../sh/scripts-part1.1.sh && ../sh/scripts-part1.1.sh
+      - name: Quellcode klonen
+        working-directory: /workdir
+        run: |
+          git clone --depth 1 -b mt5000 https://github.com/GLiNet-Tech/openwrt.git openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
-    - name: Update Feeds
-      run: |
-        cd openwrt
-        ./scripts/feeds update -a
+      - name: Feeds konfigurieren und DIY 1 ausführen
+        run: |
+          cd openwrt
+          echo "src-git packages https://github.com/immortalwrt/packages.git;master" > feeds.conf.default
+          echo "src-git luci https://github.com/immortalwrt/luci.git;master" >> feeds.conf.default
+          echo "src-git routing https://github.com/openwrt/routing.git;master" >> feeds.conf.default
+          echo "src-git telephony https://github.com/openwrt/telephony.git;master" >> feeds.conf.default
+          echo "src-git footstrap https://github.com/VizzleTF/luci-theme-footstrap.git" >> feeds.conf.default
+          [ -f $GITHUB_WORKSPACE/$DIY_P1_SH ] && chmod +x $GITHUB_WORKSPACE/$DIY_P1_SH && $GITHUB_WORKSPACE/$DIY_P1_SH || true
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
 
-    - name: Install Feeds
-      run: |
-        cd openwrt
-        ./scripts/feeds install -a
+      - name: Konfiguration anwenden und DIY 2 ausführen
+        run: |
+          [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
+          if [ "${{ github.event.inputs.docker }}" = "true" ] && [ -e $CONFIG_FILE_DOCKER ]; then
+            cat $CONFIG_FILE_DOCKER >> openwrt/.config
+          fi
+          [ -f $DIY_P2_SH ] && chmod +x $DIY_P2_SH
+          cd openwrt
+          $GITHUB_WORKSPACE/$DIY_P2_SH
 
-    - name: Load Custom Configuration & Scripts (Part 2.1)
-      run: |
-        cd openwrt
-        [ -f ../config/immortalwrt.conf ] && cp -f ../config/immortalwrt.conf .config
-        [ -f ../sh/scripts-part2.1.sh ] && chmod +x ../sh/scripts-part2.1.sh && ../sh/scripts-part2.1.sh
-        make defconfig
+          make defconfig
+          echo "=== Überprüfe gewähltes Target-Gerät ==="
+          grep "CONFIG_TARGET.*DEVICE.*=y" .config || true
 
-    - name: Compile Firmware
-      id: compile
-      run: |
-        cd openwrt
-        make -j$(nproc) || make -j1 V=s
-        
-        # Setze die Variablen für nachfolgende Schritte (Datum und Status)
-        echo "compile=success" >> $GITHUB_OUTPUT
-        echo "file-date=$(date +'\%Y.\%m.\%d')" >> $GITHUB_OUTPUT
-        echo "device-name=gl-mt5000" >> $GITHUB_OUTPUT
+      - name: Paketquellen herunterladen
+        run: |
+          cd openwrt
+          make download -j8
+          find dl -size -1024c -exec rm -f {} \;
 
-    - name: bin-Verzeichnis als Artefakt hochladen
-      uses: actions/upload-artifact@v4
-      if: steps.compile.outputs.compile == 'success'
-      with:
-        name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}
-        path: openwrt/bin
+      - name: Firmware kompilieren
+        id: compile
+        run: |
+          cd openwrt
+          echo "$(nproc) Thread(s) beim Kompilieren"
+          make -j$(nproc) || make -j1 V=s
+          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+          echo "compile=success" >> $GITHUB_OUTPUT
+          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
+          echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
-    - name: Release erstellen
-      uses: softprops/action-gh-release@v2
-      if: steps.compile.outputs.compile == 'success' && !cancelled()
-      with:
-        name: ImmortalWrt Brume 3 (GL-MT5000) ${{ github.event.inputs.branch }} (${{ steps.compile.outputs.file-date }})
-        tag_name: gl-mt5000-${{ github.event.inputs.branch }}-${{ steps.compile.outputs.file-date }}-${{ github.run_number }}
-        prerelease: true
-        body: |
-          Automatisierter ImmortalWrt Build für den GL-MT5000 (Brume 3).
-          - Verwendeter Branch/Tag: `${{ github.event.inputs.branch }}`
-          - Build-Datum: `${{ steps.compile.outputs.file-date }}`
-          - GitHub Run: `#${{ github.run_number }}`
-        files: |
-          openwrt/bin/targets/*/*/*sysupgrade*
-          openwrt/bin/targets/*/*/*factory*
-          openwrt/bin/targets/*/*/*manifest*
-          openwrt/bin/targets/*/*/*sha256sums
+      - name: bin-Verzeichnis als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
+        with:
+          name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}
+          path: openwrt/bin
+
+      - name: Release erstellen
+        uses: softprops/action-gh-release@v2
+        if: steps.compile.outputs.compile == 'success' && !cancelled()
+        with:
+          name: ImmortalWrt Brume 3 (GL-MT5000) Master ${{ steps.compile.outputs.file-date }}
+          tag_name: ImmortalWrt_GL-MT5000_master_${{ steps.compile.outputs.file-date }}
+          body: ImmortalWrt Master Feeds auf nativer mt5000 Konfiguration.
+          files: |
+            openwrt/bin/targets/*/*/*sysupgrade*
+            openwrt/bin/targets/*/*/*factory*
+            openwrt/bin/targets/*/*/*manifest*
+            openwrt/bin/targets/*/*/*sha256sums
