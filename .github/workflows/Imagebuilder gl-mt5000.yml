@@ -33,13 +33,13 @@ jobs:
           INPUT_SDK_REPO: ${{ inputs.sdk_repo }}
           INPUT_SDK_BRANCH: ${{ inputs.sdk_branch }}
         run: |
-          bash $GITHUB_WORKSPACE/clone.sh
+          bash ./clone.sh
 
       - name: Prepare & Force Target
         env:
           INPUT_SDK_REPO: ${{ inputs.sdk_repo }}
         run: |
-          bash $GITHUB_WORKSPACE/prepare.sh
+          bash ./prepare.sh
 
       - name: Start Compilation
         run: |
@@ -52,7 +52,7 @@ jobs:
           INPUT_SDK_REPO: ${{ inputs.sdk_repo }}
           INPUT_SDK_BRANCH: ${{ inputs.sdk_branch }}
         run: |
-          bash $GITHUB_WORKSPACE/finalize.sh
+          bash ./finalize.sh
 
       - name: Upload Firmware Artifacts
         uses: actions/upload-artifact@v4
