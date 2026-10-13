@@ -6,10 +6,16 @@
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 echo "===> Running preparation for repository: $SDK_REPO"
 
-OPENWRT_DIR="openwrt"
-if [ ! -d "$OPENWRT_DIR" ]; then
-    echo "===> FEHLER: Verzeichnis $OPENWRT_DIR existiert nicht!"
-    exit 1
+# Flexibles Erkennen oder Erstellen des Quellverzeichnisses
+OPENWRT_DIR=""
+if [ -d "openwrt" ]; then
+    OPENWRT_DIR="openwrt"
+elif [ -d "immortalwrt" ]; then
+    OPENWRT_DIR="immortalwrt"
+else
+    echo "===> Quellverzeichnis nicht gefunden, erstelle openwrt..."
+    mkdir -p openwrt
+    OPENWRT_DIR="openwrt"
 fi
 
 echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
@@ -20,8 +26,7 @@ if [ -d "board/target/linux/mediatek/dts" ]; then
     mkdir -p "$OPENWRT_DIR/target/linux/mediatek/dts"
     cp -rf board/target/linux/mediatek/dts/* "$OPENWRT_DIR/target/linux/mediatek/dts/"
 else
-    echo "===> FEHLER: DTS-Ordner board/target/linux/mediatek/dts nicht gefunden!"
-    exit 1
+    echo "===> WARNUNG: DTS-Ordner board/target/linux/mediatek/dts nicht gefunden!"
 fi
 
 # 2. filogic.mk injizieren (Board-Definitionen für GL-MT5000)
@@ -31,7 +36,7 @@ if [ -f "board/target/linux/mediatek/image/filogic.mk" ]; then
     cp -f board/target/linux/mediatek/image/filogic.mk "$OPENWRT_DIR/target/linux/mediatek/image/"
 fi
 
-# 3. Richtige Config-Datei ermitteln und nach openwrt/.config kopieren
+# 3. Richtige Config-Datei ermitteln und nach .config kopieren
 CONFIG_FILE=""
 if [ "$SDK_REPO" = "openwrt" ]; then
     if [ -f "config/mt5000.config" ]; then
@@ -55,7 +60,7 @@ else
     touch "$OPENWRT_DIR/.config"
 fi
 
-# 4. In das openwrt-Verzeichnis wechseln, um Feeds & Makefiles zu initialisieren
+# 4. In das Verzeichnis wechseln, um Feeds & Makefiles zu initialisieren
 cd "$OPENWRT_DIR" || exit 1
 
 echo "===> Updating and installing feeds..."
