@@ -86,9 +86,9 @@ CONFIG_TARGET_mediatek_filogic=y
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
-# 6. Konfiguration stabil abschließen (nutzt oldconfig, um erzwungene Werte zu bewahren)
-echo "===> Finalizing configuration with oldconfig..."
-yes '' | make oldconfig > /dev/null 2>&1 || true
+# 6. Konfiguration stabil abschließen mit olddefconfig (kein Broken Pipe mehr)
+echo "===> Finalizing configuration with olddefconfig..."
+make olddefconfig > /dev/null 2>&1 || true
 
 # 7. Kontrolle: Prüfen, ob das Target in der .config gelandet ist
 echo "===> Verifiziere aktives Device in .config:"
