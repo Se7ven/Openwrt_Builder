@@ -36,7 +36,7 @@ if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
 fi
 
 # =================================================================
-# NEU: CUSTOM PACKAGES ORDNER EINBINDEN
+# 3. CUSTOM PACKAGES ORDNER EINBINDEN
 # =================================================================
 CUSTOM_DIR="package/custom"
 echo "===> Prepare custom packages directory: $CUSTOM_DIR"
@@ -55,7 +55,7 @@ done
 rm -rf tmp/.config-package.in 2>/dev/null || true
 # =================================================================
 
-# 3. Feeds aktualisieren und installieren
+# 4. Feeds aktualisieren und installieren
 echo "===> Updating and installing feeds..."
 ./scripts/feeds update -a && ./scripts/feeds install -a
 if [ $? -ne 0 ]; then
@@ -64,7 +64,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # =================================================================
-# 3b.FIX: Radikales Löschen der Kconfig-Störenfriede nach Feed-Install
+# 5. Radikales Löschen der Kconfig-Störenfriede nach Feed-Install
 # =================================================================
 echo "===> Deleting recursive dependency packages completely..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
@@ -77,7 +77,7 @@ rm -rf package/feeds/*/squeezelite* 2>/dev/null || true
 rm -rf tmp/ 2>/dev/null || true
 # =================================================================
 
-# 4. Config-Datei ermitteln und kopieren
+# 6. Config-Datei ermitteln und kopieren
 CONFIG_FILE=""
 if [ "$SDK_REPO" = "openwrt" ]; then
     if [ -f "../config/mt5000.config" ]; then
@@ -101,13 +101,7 @@ else
     touch .config
 fi
 
-# 5. Basiskonfiguration erzeugen, falls .config leer ist
-if [ ! -s .config ]; then
-    echo "===> .config ist leer. Erzeuge Basiskonfiguration via make defconfig..."
-    make defconfig
-fi
-
-# 6. Target-Konfiguration für GL-MT5000 bereinigen und erzwingen
+# 7. Target-Konfiguration für GL-MT5000 bereinigen und erzwingen
 echo "===> Sanitizing and forcing GL-MT5000 target configuration in .config..."
 
 sed -i '/CONFIG_TARGET_BOARD/d' .config
@@ -127,7 +121,7 @@ CONFIG_TARGET_SUBTARGET="filogic"
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
-# 7. Netzwerkkonfiguration für GL-MT5000 hinterlegen
+# 8. Netzwerkkonfiguration für GL-MT5000 hinterlegen
 echo "===> Konfiguriere Netzwerk & Basis für GL-MT5000..."
 mkdir -p package/base-files/files/etc/config
 cat << 'EOF' > package/base-files/files/etc/config/network
@@ -154,20 +148,17 @@ config interface 'wan'
 	option proto 'dhcp'
 EOF
 
-# 8. Sauberen, non-interaktiven Konfigurationsabgleich via olddefconfig durchführen
-echo "===> Running clean non-interactive olddefconfig sync..."
-sed -i '/^#.*is not set$/!{/=/!d}' .config 2>/dev/null || true
+# 9. Sauberen, non-interaktiven Konfigurationsabgleich durchführen
+echo "===> Running clean non-interactive config sync..."
 
 export TERM=dumb
 export DEBIAN_FRONTEND=noninteractive
 
-# Eventuell verbliebene mconf-Manipulationen restlos entfernen
-rm -f scripts/config/mconf
+# make defconfig liest die manuellen Einträge ein und befüllt fehlende 
+# Abhängigkeiten absolut non-interaktiv, ohne in eine EOF-Schleife zu rennen.
+make defconfig
 
-# Führe das native, non-interaktive olddefconfig aus
-make olddefconfig
-
-# 9. Kontrolle
+# 10. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
 grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
 
