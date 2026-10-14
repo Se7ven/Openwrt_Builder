@@ -25,15 +25,15 @@ cd "$OPENWRT_DIR"
 #if [ -d "../board/target/linux/mediatek/dts" ]; then
 #    echo "===> Injecting custom DTS files for GL-MT5000..."
 #    mkdir -p "target/linux/mediatek/dts"
-#   cp -rf ../board/target/linux/mediatek/dts/* "target/linux/mediatek/dts/"
+#    cp -rf ../board/target/linux/mediatek/dts/* "target/linux/mediatek/dts/"
 #fi
 
 # 2. filogic.mk injizieren
-#if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
-#    echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
-#   mkdir -p "target/linux/mediatek/image"
-#    cp -f ../board/target/linux/mediatek/image/filogic.mk "target/linux/mediatek/image/"
-#fi
+if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
+    echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
+    mkdir -p "target/linux/mediatek/image"
+    cp -f ../board/target/linux/mediatek/image/filogic.mk "target/linux/mediatek/image/"
+fi
 
 # =================================================================
 # 3. CUSTOM PACKAGES ORDNER EINBINDEN
