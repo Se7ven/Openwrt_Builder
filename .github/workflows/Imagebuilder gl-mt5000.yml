@@ -42,6 +42,7 @@ jobs:
       - name: Prepare & Force Target
         env:
           INPUT_SDK_REPO: ${{ inputs.sdk_repo }}
+          INPUT_SDK_BRANCH: ${{ inputs.sdk_branch }}  # <--- Hier wurde die Variable korrekt ergänzt!
         run: |
           bash ./sh/prepare.sh
 
@@ -68,14 +69,14 @@ jobs:
         run: |
           bash ./sh/finalize.sh
 
-      # Behält das alte Artifact-System als Backup (optional, tut aber nicht weh)
+      # Behält das alte Artifact-System als Backup (optional)
       - name: Upload Firmware Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: gl-mt5000-firmware-${{ inputs.sdk_repo }}-${{ inputs.sdk_branch }}
           path: openwrt/bin/targets/mediatek/filogic/*-gl-mt5000-*
 
-      # NEU: Erstellt offizielles GitHub Release und lädt die Dateien direkt ins Repo
+      # Erstellt offizielles GitHub Release und lädt die Dateien direkt ins Repo
       - name: Create Release & Upload Firmware to Repository
         uses: softprops/action-gh-release@v2
         with:
