@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Inklusive robuster Kernel-Patch-Injektion & globalem files/ Ordner
+# Prepare Script - Mit dediziertem package/custom Ordner & Konfliktbereinigung
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -29,45 +29,11 @@ if [ -d "../board/target/linux/mediatek/dts" ]; then
 fi
 
 # 2. filogic.mk injizieren
-if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
-    echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
-    mkdir -p "target/linux/mediatek/image"
-    cp -f ../board/target/linux/mediatek/image/filogic.mk "target/linux/mediatek/image/"
-fi
-
-# =================================================================
-# 2.1 DYNAMISCHE KERNEL-PATCH-INJEKTION & BEREINIGUNG
-# =================================================================
-PATCH_SOURCE_DIR=""
-
-if [ "$SDK_BRANCH_TYPE" = "stable" ]; then
-    PATCH_SOURCE_DIR="../patches"
-    echo "===> Branch ist STABLE -> Verwende Patches aus ../patches"
-else
-    PATCH_TARGET_DIR=$(find target/linux/mediatek -type d -name "patches-*" | head -n 1)
-    if [[ "$PATCH_TARGET_DIR" == *"6.18"* ]] && [ -d "../patche618" ]; then
-        PATCH_SOURCE_DIR="../patche618"
-        echo "===> Kernel 6.18 erkannt -> Verwende Patches aus ../patche618"
-    else
-        PATCH_SOURCE_DIR="../patches"
-        echo "===> Fallback auf Standard-Patches aus ../patches"
-    fi
-fi
-
-PATCH_TARGET_DIR=$(find target/linux/mediatek -type d -name "patches-*" | head -n 1)
-if [ -n "$PATCH_TARGET_DIR" ] && [ -n "$PATCH_SOURCE_DIR" ]; then
-    mkdir -p "$PATCH_TARGET_DIR"
-    echo "===> Bereinige konkurrierende Ethernet- und PHY-Patches in $PATCH_TARGET_DIR ..."
-    rm -f "$PATCH_TARGET_DIR"/*mtk_eth_soc* 2>/dev/null || true
-    rm -f "$PATCH_TARGET_DIR"/*mtk-2p5ge* 2>/dev/null || true
-    rm -f "$PATCH_TARGET_DIR"/*i2p5g* 2>/dev/null || true
-    
-    echo "===> Injiziere Patches aus $PATCH_SOURCE_DIR nach $PATCH_TARGET_DIR ..."
-    cp -f "$PATCH_SOURCE_DIR"/*.patch "$PATCH_TARGET_DIR/"
-    ls -l "$PATCH_TARGET_DIR"
-else
-    echo "===> WARNUNG: Kein Patch-Ziel- oder Quellverzeichnis gefunden!"
-fi
+#if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
+#    echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
+#   mkdir -p "target/linux/mediatek/image"
+#    cp -f ../board/target/linux/mediatek/image/filogic.mk "target/linux/mediatek/image/"
+#fi
 
 # =================================================================
 # 3. CUSTOM PACKAGES ORDNER EINBINDEN
@@ -155,19 +121,15 @@ CONFIG_TARGET_SUBTARGET="filogic"
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
-# 8. Vollständige Netzwerkkonfiguration im globalen files/-Ordner hinterlegen
-cd ..
-echo "===> Konfiguriere vollständiges Netzwerk im globalen files/-Ordner..."
-mkdir -p files/etc/config
-cat << 'EOF' > files/etc/config/network
+# 8. Netzwerkkonfiguration für GL-MT5000 hinterlegen
+echo "===> Konfiguriere Netzwerk & Basis für GL-MT5000..."
+mkdir -p package/base-files/files/etc/config
+cat << 'EOF' > package/base-files/files/etc/config/network
 config interface 'loopback'
 	option device 'lo'
 	option proto 'static'
-	list ipaddr '127.0.0.1/8'
-
-config globals 'globals'
-	option dhcp_default_duid '0004f31c8204880e56098d4a3884ce4ecbf2'
-	option ula_prefix 'fdc4:8d08:2f12::/48'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
 
 config device
 	option name 'br-lan'
@@ -178,61 +140,15 @@ config device
 config interface 'lan'
 	option device 'br-lan'
 	option proto 'static'
-	option ip6assign '64'
-	list ipaddr '192.168.178.4/24'
-	option ip6hint '1'
-
-config interface 'wan'
-	option device 'eth1.7'
-	option proto 'pppoe'
-	option username 'vodafone-vdsl.komplett/vb3986354996'
-	option password 'geqclvmq'
-	option norelease '1'
-	option mtu '1492'
-	option peerdns '0'
-	list dns '1.1.1.1'
-	list dns '8.8.8.8'
-	option ip6assign '64'
-	list ip6class 'WAN_6'
-
-config interface 'Modem'
-	option proto 'static'
-	option device 'eth1'
-	option ipaddr '192.168.1.2'
+	option ipaddr '192.168.100.1'
 	option netmask '255.255.255.0'
 
-config interface 'wg0'
-	option proto 'wireguard'
-	option private_key 'YNjZSoBKWk5MrWu1BSOmC/mb6dNM9EcCpic4dSQgDFI='
-	option listen_port '51820'
-	list addresses '10.9.0.1/24'
-	option mtu '1412'
-
-config wireguard_wg0
-	option public_key 'vGZl57B6NQdAz3PrNVTkZxczoEsJKYnFngmN2B51DSA='
-	list allowed_ips '10.9.0.2/32'
-	option route_allowed_ips '1'
-
-config device
-	option name 'wg0'
-	option mtu6 '1412'
-	option mtu '1412'
-
-config device
-	option name 'eth1.7'
-	option type '8021q'
-	option ifname 'eth1'
-	option vid '7'
-	option mtu '1500'
-	option mtu6 '1500'
-
-config device
-	option name 'lan1'
-	option mtu '1504'
+config interface 'wan'
+	option device 'eth1'
+	option proto 'static'
+	option ipaddr '192.168.10.1'
+	option netmask '255.255.255.0'
 EOF
-
-# Zurück ins Quellverzeichnis für make defconfig
-cd "$OPENWRT_DIR"
 
 # 9. Sauberen, non-interaktiven Konfigurationsabgleich durchführen
 echo "===> Running clean non-interactive config sync..."
