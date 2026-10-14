@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Dynamische Kernel-Patch-Injektion & globalem files/ Ordner
+# Prepare Script - Inklusive robuster Kernel-Patch-Injektion & globalem files/ Ordner
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -39,36 +39,34 @@ fi
 # 2.1 DYNAMISCHE KERNEL-PATCH-INJEKTION & BEREINIGUNG
 # =================================================================
 PATCH_SOURCE_DIR=""
-if [[ "$SDK_BRANCH_TYPE" == *"main"* ]] || [[ "$SDK_BRANCH_TYPE" == *"master"* ]] || [ -d "../patche618" ]; then
-    if [ -d "../patche618" ]; then
-        PATCH_SOURCE_DIR="../patche618"
-        echo "===> Verwende Kernel-Patches für MAIN / KERNEL 6.18 (aus patche618)"
-    fi
-fi
 
-# Fallback auf den Standard-Stable-Ordner
-if [ -z "$PATCH_SOURCE_DIR" ] && [ -d "../patches" ]; then
+if [ "$SDK_BRANCH_TYPE" = "stable" ]; then
     PATCH_SOURCE_DIR="../patches"
-    echo "===> Verwende Kernel-Patches für STABLE (aus patches)"
+    echo "===> Branch ist STABLE -> Verwende Patches aus ../patches"
+else
+    PATCH_TARGET_DIR=$(find target/linux/mediatek -type d -name "patches-*" | head -n 1)
+    if [[ "$PATCH_TARGET_DIR" == *"6.18"* ]] && [ -d "../patche618" ]; then
+        PATCH_SOURCE_DIR="../patche618"
+        echo "===> Kernel 6.18 erkannt -> Verwende Patches aus ../patche618"
+    else
+        PATCH_SOURCE_DIR="../patches"
+        echo "===> Fallback auf Standard-Patches aus ../patches"
+    fi
 fi
 
-if [ -n "$PATCH_SOURCE_DIR" ]; then
-    PATCH_TARGET_DIR=$(find target/linux/mediatek -type d -name "patches-*" | head -n 1)
-    if [ -n "$PATCH_TARGET_DIR" ]; then
-        mkdir -p "$PATCH_TARGET_DIR"
-        echo "===> Bereinige konkurrierende Ethernet- und PHY-Patches in $PATCH_TARGET_DIR ..."
-        rm -f "$PATCH_TARGET_DIR"/*mtk_eth_soc* 2>/dev/null || true
-        rm -f "$PATCH_TARGET_DIR"/*mtk-2p5ge* 2>/dev/null || true
-        rm -f "$PATCH_TARGET_DIR"/*i2p5g* 2>/dev/null || true
-        
-        echo "===> Injiziere Patches aus $PATCH_SOURCE_DIR nach $PATCH_TARGET_DIR ..."
-        cp -f "$PATCH_SOURCE_DIR"/*.patch "$PATCH_TARGET_DIR/"
-        ls -l "$PATCH_TARGET_DIR"
-    else
-        echo "===> WARNUNG: Kein Kernel-Patch-Verzeichnis unter target/linux/mediatek gefunden!"
-    fi
+PATCH_TARGET_DIR=$(find target/linux/mediatek -type d -name "patches-*" | head -n 1)
+if [ -n "$PATCH_TARGET_DIR" ] && [ -n "$PATCH_SOURCE_DIR" ]; then
+    mkdir -p "$PATCH_TARGET_DIR"
+    echo "===> Bereinige konkurrierende Ethernet- und PHY-Patches in $PATCH_TARGET_DIR ..."
+    rm -f "$PATCH_TARGET_DIR"/*mtk_eth_soc* 2>/dev/null || true
+    rm -f "$PATCH_TARGET_DIR"/*mtk-2p5ge* 2>/dev/null || true
+    rm -f "$PATCH_TARGET_DIR"/*i2p5g* 2>/dev/null || true
+    
+    echo "===> Injiziere Patches aus $PATCH_SOURCE_DIR nach $PATCH_TARGET_DIR ..."
+    cp -f "$PATCH_SOURCE_DIR"/*.patch "$PATCH_TARGET_DIR/"
+    ls -l "$PATCH_TARGET_DIR"
 else
-    echo "===> HINWEIS: Kein passender Patch-Quellordner gefunden."
+    echo "===> WARNUNG: Kein Patch-Ziel- oder Quellverzeichnis gefunden!"
 fi
 
 # =================================================================
@@ -158,7 +156,6 @@ CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
 # 8. Vollständige Netzwerkkonfiguration im globalen files/-Ordner hinterlegen
-# (WICHTIG: Ausserhalb des Quellverzeichnisses, damit es korrekt ins Image gebacken wird)
 cd ..
 echo "===> Konfiguriere vollständiges Netzwerk im globalen files/-Ordner..."
 mkdir -p files/etc/config
