@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Universell mit quell-spezifischer Kernel-Bereinigung & Fuzz
+# Prepare Script - Universell mit radikaler Patch-Bereinigung & Fuzz
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -21,17 +21,10 @@ echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
 cd "$OPENWRT_DIR"
 
 # =================================================================
-# 0. Inkompatible Kernel-Pending-Patches nur für offizielles OpenWrt bereinigen
+# 0. Radikales Löschen des problematischen 795-12 Patches im gesamten Quellbaum
 # =================================================================
-if [ "$SDK_REPO" = "openwrt" ]; then
-    echo "===> Prüfe auf bekannte inkompatible OpenWrt-Kernel-Patches..."
-    for p_dir in target/linux/generic/pending-6.12 target/linux/generic/pending-6.18; do
-        if [ -f "$p_dir/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch" ]; then
-            echo "===> Entferne inkompatiblen Kernel-Patch 795-12 in Verzeichnis: $p_dir..."
-            rm -f "$p_dir/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch"
-        fi
-    done
-fi
+echo "===> Suche und vernichte inkompatiblen Kernel-Patch 795-12..."
+find . -name "*795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch" -exec rm -f {} +
 
 # =================================================================
 # 1. MT5000 Patches universell mit robuster Fehlertoleranz anwenden
