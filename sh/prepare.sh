@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Universell mit Patch-Bereinigung und Fuzz-Toleranz
+# Prepare Script - Universell mit quell-spezifischer Kernel-Bereinigung
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -21,11 +21,16 @@ echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
 cd "$OPENWRT_DIR"
 
 # =================================================================
-# 0. Inkompatiblen Kernel-Pending-Patch für 6.12 entfernen (falls vorhanden)
+# 0. Inkompatible Kernel-Pending-Patches nur für offizielles OpenWrt bereinigen
 # =================================================================
-if [ -f "target/linux/generic/pending-6.12/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch" ]; then
-    echo "===> Entferne inkompatiblen Kernel-Patch 795-12 für stabilen 6.12-Kernel..."
-    rm -f target/linux/generic/pending-6.12/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch
+if [ "$SDK_REPO" = "openwrt" ]; then
+    echo "===> Prüfe auf bekannte inkompatible OpenWrt-Kernel-Patches..."
+    for p_dir in target/linux/generic/pending-6.12 target/linux/generic/pending-6.18; do
+        if [ -f "$p_dir/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch" ]; then
+            echo "===> Entferne inkompatiblen Kernel-Patch 795-12 in Verzeichnis: $p_dir..."
+            rm -f "$p_dir/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch"
+        fi
+    done
 fi
 
 # =================================================================
