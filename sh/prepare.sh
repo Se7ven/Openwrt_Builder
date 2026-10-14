@@ -1,32 +1,31 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Universell mit exakter Repo-Trennung, Patch-Schutz & Bereinigung
+# Prepare Script - Universell mit exakter 4-Ordner-Trennung, Patch-Schutz & Bereinigung
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 SDK_BRANCH_TYPE="${INPUT_SDK_BRANCH:-main}"
 echo "===> Running preparation for repository: $SDK_REPO (Branch-Type: $SDK_BRANCH_TYPE)"
 
-# Präzise Verzeichnis-Zuordnung passend zum Repository
-OPENWRT_DIR=""
-if [ "$SDK_REPO" = "immortalwrt" ]; then
-    if [ -d "immortalwrt" ]; then
-        OPENWRT_DIR="immortalwrt"
-    fi
+# Exakte Ordner-Zuordnung passend zum Clone-Script und Workflow
+if [ "$SDK_REPO" = "immortalwrt" ] && [ "$SDK_BRANCH_TYPE" = "main" ]; then
+    OPENWRT_DIR="immortalwrt_master"
 else
-    if [ -d "openwrt" ]; then
-        OPENWRT_DIR="openwrt"
-    fi
+    OPENWRT_DIR="${SDK_REPO}_${SDK_BRANCH_TYPE}"
 fi
 
-# Fallback-Prüfung
-if [ -z "$OPENWRT_DIR" ]; then
-    if [ -d "immortalwrt" ]; then
-        OPENWRT_DIR="immortalwrt"
-    elif [ -d "openwrt" ]; then
-        OPENWRT_DIR="openwrt"
+# Fallback-Prüfung, falls das Verzeichnis anders heißen sollte
+if [ ! -d "$OPENWRT_DIR" ]; then
+    if [ -d "immortalwrt_master" ]; then
+        OPENWRT_DIR="immortalwrt_master"
+    elif [ -d "immortalwrt_stable" ]; then
+        OPENWRT_DIR="immortalwrt_stable"
+    elif [ -d "openwrt_main" ]; then
+        OPENWRT_DIR="openwrt_main"
+    elif [ -d "openwrt_stable" ]; then
+        OPENWRT_DIR="openwrt_stable"
     else
-        echo "===> FEHLER: Weder 'openwrt' noch 'immortalwrt' Verzeichnis gefunden!"
+        echo "===> FEHLER: Kein passendes Zielverzeichnis für $SDK_REPO ($SDK_BRANCH_TYPE) gefunden!"
         exit 1
     fi
 fi
