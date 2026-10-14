@@ -46,6 +46,7 @@ jobs:
           cd openwrt
           export TERM=dumb
           export DEBIAN_FRONTEND=noninteractive
+          ./scripts/config/conf --olddefconfig .config
           make world -j$(nproc) || make world -j1 V=s
 
       - name: Rename Firmware Images
