@@ -68,6 +68,20 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# =================================================================
+# 3b.FIX: Radikales Löschen der Kconfig-Störenfriede nach Feed-Install
+# =================================================================
+echo "===> Deleting recursive dependency packages completely..."
+rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
+rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
+rm -rf feeds/luci/applications/luci-app-weechat 2>/dev/null || true
+rm -rf feeds/packages/utils/weechat 2>/dev/null || true
+rm -rf package/feeds/*/qt5 2>/dev/null || true
+rm -rf package/feeds/*/weechat 2>/dev/null || true
+rm -rf package/feeds/*/squeezelite* 2>/dev/null || true
+rm -rf tmp/ 2>/dev/null || true
+# =================================================================
+
 # 4. Config-Datei ermitteln und kopieren
 CONFIG_FILE=""
 if [ "$SDK_REPO" = "openwrt" ]; then
