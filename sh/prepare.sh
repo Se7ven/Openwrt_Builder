@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Universell mit quell-spezifischer Kernel-Bereinigung
+# Prepare Script - Universell mit quell-spezifischer Kernel-Bereinigung & Fuzz
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
