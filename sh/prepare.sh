@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Universell mit Fuzz-Toleranz für Patch-Anwendung
+# Prepare Script - Universell mit robustem Patch-Fallback (Git Apply & Patch Fuzz)
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -21,7 +21,7 @@ echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
 cd "$OPENWRT_DIR"
 
 # =================================================================
-# 1. MT5000 Patches universell mit Fuzz-Toleranz anwenden
+# 1. MT5000 Patches universell mit robuster Fehlertoleranz anwenden
 # =================================================================
 echo "===> Prüfe und wende MT5000-Patches an..."
 
@@ -38,9 +38,8 @@ if [ -d "$PATCH_DIR" ]; then
         [ -e "$patch" ] || continue
         echo "Wende Patch an: $(basename "$patch")"
         
-        # Versucht den Patch anzuwenden, erlaubt leichte Abweichungen (--fuzz=3)
-        # und nutzt bei Bedarf den 3-Wege-Merge-Fallback
-        git apply --fuzz=3 "$patch" || git apply --remerge -3 "$patch" || {
+        # Versucht es zuerst mit git apply (-3), und weicht bei Versatz auf patch mit --fuzz=3 aus
+        git apply -3 "$patch" || patch -p1 --fuzz=3 < "$patch" || {
             echo "FEHLER: Patch $(basename "$patch") konnte nicht angewendet werden!"
             exit 1
         }
