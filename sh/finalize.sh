@@ -12,14 +12,11 @@ DATE=$(date +'%Y%m%d')
 PREFIX="${SDK_REPO}-${SDK_BRANCH_TYPE}-${DATE}"
 echo "===> Renaming firmware images with prefix: $PREFIX"
 
-# 1. Sysupgrade-Image umbenennen (egal ob .bin oder .itb)
 for f in *sysupgrade*; do
     if [ -f "$f" ]; then
-        # Ermittle Dateiendung (.bin oder .itb)
         EXT="${f##*.}"
         TARGET_NAME="${PREFIX}-gl-mt5000-sysupgrade.${EXT}"
         
-        # Nur umbenennen, wenn der Name nicht schon passt
         if [ "$f" != "$TARGET_NAME" ]; then
             mv "$f" "$TARGET_NAME"
             echo "Renamed: $f -> $TARGET_NAME"
@@ -27,7 +24,6 @@ for f in *sysupgrade*; do
     fi
 done
 
-# 2. Factory-Image umbenennen (falls vorhanden)
 for f in *factory*; do
     if [ -f "$f" ]; then
         EXT="${f##*.}"
