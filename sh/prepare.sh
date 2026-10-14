@@ -43,11 +43,6 @@ echo "===> Prepare custom packages directory: $CUSTOM_DIR"
 rm -rf "$CUSTOM_DIR"
 mkdir -p "$CUSTOM_DIR"
 
-# Hier kannst du deine gewünschten Repositories eintragen, die nach package/custom geladen werden sollen:
-# Beispiel:
-# git clone --depth 1 https://github.com/pymumu/luci-app-smartdns "$CUSTOM_DIR/luci-app-smartdns"
-# git clone --depth 1 https://github.com/pymumu/smartdns "$CUSTOM_DIR/smartdns"
-
 # Konfligierende Makefiles im gesamten Baum (außerhalb von custom) bereinigen
 CONFLICTING_KEYWORDS=("weechat" "squeezelite" "qt5" "openvswitch")
 for keyword in "${CONFLICTING_KEYWORDS[@]}"; do
@@ -167,7 +162,14 @@ export TERM=dumb
 export DEBIAN_FRONTEND=noninteractive
 make defconfig
 
-# 9. Kontrolle
+# 9. Mconf-Falle final ausschalten: Verhindere jeglichen mconf-Aufruf im Build-System
+echo "===> Neutralizing mconf to force 100% non-interactive builds..."
+if [ -f scripts/config/conf ]; then
+    rm -f scripts/config/mconf
+    ln -sf conf scripts/config/mconf
+fi
+
+# 10. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
 grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
 
