@@ -154,22 +154,20 @@ config interface 'wan'
 	option proto 'dhcp'
 EOF
 
-# 8. Konfigurationsabgleich non-interaktiv durchführen
-echo "===> Running automated configuration sync..."
+# 8. Sauberen, non-interaktiven Konfigurationsabgleich via olddefconfig durchführen
+echo "===> Running clean non-interactive olddefconfig sync..."
 sed -i '/^#.*is not set$/!{/=/!d}' .config 2>/dev/null || true
 
 export TERM=dumb
 export DEBIAN_FRONTEND=noninteractive
-make defconfig
 
-# 9. Mconf-Falle final ausschalten: Verhindere jeglichen mconf-Aufruf im Build-System
-echo "===> Neutralizing mconf to force 100% non-interactive builds..."
-if [ -f scripts/config/conf ]; then
-    rm -f scripts/config/mconf
-    ln -sf conf scripts/config/mconf
-fi
+# Eventuell verbliebene mconf-Manipulationen restlos entfernen
+rm -f scripts/config/mconf
 
-# 10. Kontrolle
+# Führe das native, non-interaktive olddefconfig aus
+make olddefconfig
+
+# 9. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
 grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
 
