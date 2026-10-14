@@ -1,14 +1,17 @@
 #!/bin/bash
 # =================================================================
-# Clone Script - Robust Dual-Mode (Main & Stable)
+# Clone Script - Robust Dual-Mode mit 4 getrennten Zielordnern
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 SDK_BRANCH_TYPE="${INPUT_SDK_BRANCH:-main}"
 
+# Bestimmt den exakten Zielordner basierend auf Repository und Branch
+TARGET_DIR="${SDK_REPO}_${SDK_BRANCH_TYPE}"
+
 REPO_URL="https://github.com/${SDK_REPO}/${SDK_REPO}.git"
 
-echo "===> Cloning repository: $REPO_URL"
+echo "===> Cloning repository: $REPO_URL into target directory: $TARGET_DIR"
 
 if [ "$SDK_BRANCH_TYPE" = "main" ]; then
     if [ "$SDK_REPO" = "immortalwrt" ]; then
@@ -18,11 +21,11 @@ if [ "$SDK_BRANCH_TYPE" = "main" ]; then
     fi
     
     echo "===> Using Main branch: $TARGET_BRANCH for $SDK_REPO"
-    git clone -b "$TARGET_BRANCH" --single-branch "$REPO_URL" openwrt
+    git clone -b "$TARGET_BRANCH" --single-branch "$REPO_URL" "$TARGET_DIR"
 else
     echo "===> Using Stable branch mode for $SDK_REPO..."
-    git clone "$REPO_URL" openwrt
-    cd openwrt || exit 1
+    git clone "$REPO_URL" "$TARGET_DIR"
+    cd "$TARGET_DIR" || exit 1
     
     LATEST_STABLE=$(git branch -r | grep -oE 'origin/openwrt-[0-9]+\.[0-9]+' | sed 's|origin/||' | sort -V | tail -n 1)
     
@@ -35,4 +38,4 @@ else
     cd ..
 fi
 
-echo "===> Clone completed successfully."
+echo "===> Clone into '$TARGET_DIR' completed successfully."
