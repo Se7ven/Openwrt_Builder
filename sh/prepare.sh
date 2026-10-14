@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Universell mit Patch-Anwendung für alle Quellen
+# Prepare Script - Universell mit Fuzz-Toleranz für Patch-Anwendung
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -21,7 +21,7 @@ echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
 cd "$OPENWRT_DIR"
 
 # =================================================================
-# 1. MT5000 Patches für ALLE Quellen universell anwenden
+# 1. MT5000 Patches universell mit Fuzz-Toleranz anwenden
 # =================================================================
 echo "===> Prüfe und wende MT5000-Patches an..."
 
@@ -37,7 +37,13 @@ if [ -d "$PATCH_DIR" ]; then
     for patch in "$PATCH_DIR"/*.patch; do
         [ -e "$patch" ] || continue
         echo "Wende Patch an: $(basename "$patch")"
-        git apply "$patch" || git apply --remerge -3 "$patch"
+        
+        # Versucht den Patch anzuwenden, erlaubt leichte Abweichungen (--fuzz=3)
+        # und nutzt bei Bedarf den 3-Wege-Merge-Fallback
+        git apply --fuzz=3 "$patch" || git apply --remerge -3 "$patch" || {
+            echo "FEHLER: Patch $(basename "$patch") konnte nicht angewendet werden!"
+            exit 1
+        }
     done
     echo "===> Alle MT5000-Patches erfolgreich angewendet."
 else
