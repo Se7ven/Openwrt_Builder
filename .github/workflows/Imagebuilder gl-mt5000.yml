@@ -50,15 +50,17 @@ jobs:
           cd openwrt
           export TERM=dumb
           export DEBIAN_FRONTEND=noninteractive
+          NPROC=$(nproc)
           
-          # 1. Zuerst alle Pakete herunterladen (sichtbar!)
+          # 1. Download mit sichtbaren Lebenszeichen
           echo "===> Downloading packages..."
-          make download -j8 V=s
+          set -o pipefail
+          make download -j8 V=s 2>&1 | grep --line-buffered -E "^(make\[|\*\*\*|Checking|Downloading)"
           
-          # 2. Danach kompilieren (mit V=s)
+          # 2. Build leise durchziehen, volle Ausgabe nur bei Fehlern
           echo "===> Starting build process..."
-          make world -j$(nproc) V=s || make world -j1 V=s
-
+          make world -j"$NPROC" || make world -j1 V=s
+         
       - name: Rename Firmware Images
         env:
           INPUT_SDK_REPO: ${{ inputs.sdk_repo }}
