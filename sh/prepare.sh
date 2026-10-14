@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Universell mit robustem Patch-Fallback (Git Apply & Patch Fuzz)
+# Prepare Script - Universell mit Patch-Bereinigung und Fuzz-Toleranz
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -19,6 +19,14 @@ fi
 
 echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
 cd "$OPENWRT_DIR"
+
+# =================================================================
+# 0. Inkompatiblen Kernel-Pending-Patch für 6.12 entfernen (falls vorhanden)
+# =================================================================
+if [ -f "target/linux/generic/pending-6.12/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch" ]; then
+    echo "===> Entferne inkompatiblen Kernel-Patch 795-12 für stabilen 6.12-Kernel..."
+    rm -f target/linux/generic/pending-6.12/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch
+fi
 
 # =================================================================
 # 1. MT5000 Patches universell mit robuster Fehlertoleranz anwenden
