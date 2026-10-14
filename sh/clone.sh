@@ -11,7 +11,6 @@ REPO_URL="https://github.com/${SDK_REPO}/${SDK_REPO}.git"
 echo "===> Cloning repository: $REPO_URL"
 
 if [ "$SDK_BRANCH_TYPE" = "main" ]; then
-    # ImmortalWrt nutzt 'master', OpenWrt nutzt 'main'
     if [ "$SDK_REPO" = "immortalwrt" ]; then
         TARGET_BRANCH="master"
     else
@@ -25,7 +24,6 @@ else
     git clone "$REPO_URL" openwrt
     cd openwrt || exit 1
     
-    # Finde den neuesten openwrt-x.y Branch
     LATEST_STABLE=$(git branch -r | grep -oE 'origin/openwrt-[0-9]+\.[0-9]+' | sed 's|origin/||' | sort -V | tail -n 1)
     
     if [ -z "$LATEST_STABLE" ]; then
