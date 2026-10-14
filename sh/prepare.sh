@@ -22,11 +22,11 @@ echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
 cd "$OPENWRT_DIR"
 
 # 1. DTS-Injektion
-if [ -d "../board/target/linux/mediatek/dts" ]; then
-    echo "===> Injecting custom DTS files for GL-MT5000..."
-    mkdir -p "target/linux/mediatek/dts"
-    cp -rf ../board/target/linux/mediatek/dts/* "target/linux/mediatek/dts/"
-fi
+#if [ -d "../board/target/linux/mediatek/dts" ]; then
+#    echo "===> Injecting custom DTS files for GL-MT5000..."
+#    mkdir -p "target/linux/mediatek/dts"
+#   cp -rf ../board/target/linux/mediatek/dts/* "target/linux/mediatek/dts/"
+#fi
 
 # 2. filogic.mk injizieren
 #if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
