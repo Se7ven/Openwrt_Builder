@@ -149,7 +149,7 @@ sed -i '/^#.*is not set$/!{/=/!d}' .config 2>/dev/null || true
 
 # Absolut non-interaktiver Durchlauf, der fehlende Defaults automatisch ergänzt
 export TERM=dumb
-make olddefconfig
+./scripts/config/conf --olddefconfig .config
 
 # 9. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
