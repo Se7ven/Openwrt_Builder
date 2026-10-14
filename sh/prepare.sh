@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Inklusive Kernel-Patch-Injektion & globalem files/ Ordner
+# Prepare Script - Dynamische Kernel-Patch-Injektion & globalem files/ Ordner
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -36,20 +36,39 @@ if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
 fi
 
 # =================================================================
-# 2.1 KERNEL-PATCHES INJIZIEREN (MT7987 / 2.5G PHY Support)
+# 2.1 DYNAMISCHE KERNEL-PATCH-INJEKTION & BEREINIGUNG
 # =================================================================
-if [ -d "../patches" ]; then
-    echo "===> Injecting custom kernel patches for MT7987 into target/linux/mediatek/patches-* ..."
-    # Finde das passende Kernel-Patch-Verzeichnis (z.B. patches-6.6 oder ähnlich)
+PATCH_SOURCE_DIR=""
+if [[ "$SDK_BRANCH_TYPE" == *"main"* ]] || [[ "$SDK_BRANCH_TYPE" == *"master"* ]] || [ -d "../patche618" ]; then
+    if [ -d "../patche618" ]; then
+        PATCH_SOURCE_DIR="../patche618"
+        echo "===> Verwende Kernel-Patches für MAIN / KERNEL 6.18 (aus patche618)"
+    fi
+fi
+
+# Fallback auf den Standard-Stable-Ordner
+if [ -z "$PATCH_SOURCE_DIR" ] && [ -d "../patches" ]; then
+    PATCH_SOURCE_DIR="../patches"
+    echo "===> Verwende Kernel-Patches für STABLE (aus patches)"
+fi
+
+if [ -n "$PATCH_SOURCE_DIR" ]; then
     PATCH_TARGET_DIR=$(find target/linux/mediatek -type d -name "patches-*" | head -n 1)
     if [ -n "$PATCH_TARGET_DIR" ]; then
         mkdir -p "$PATCH_TARGET_DIR"
-        cp -f ../patches/*.patch "$PATCH_TARGET_DIR/"
-        echo "===> Patches erfolgreich nach $PATCH_TARGET_DIR kopiert:"
+        echo "===> Bereinige konkurrierende Ethernet- und PHY-Patches in $PATCH_TARGET_DIR ..."
+        rm -f "$PATCH_TARGET_DIR"/*mtk_eth_soc* 2>/dev/null || true
+        rm -f "$PATCH_TARGET_DIR"/*mtk-2p5ge* 2>/dev/null || true
+        rm -f "$PATCH_TARGET_DIR"/*i2p5g* 2>/dev/null || true
+        
+        echo "===> Injiziere Patches aus $PATCH_SOURCE_DIR nach $PATCH_TARGET_DIR ..."
+        cp -f "$PATCH_SOURCE_DIR"/*.patch "$PATCH_TARGET_DIR/"
         ls -l "$PATCH_TARGET_DIR"
     else
         echo "===> WARNUNG: Kein Kernel-Patch-Verzeichnis unter target/linux/mediatek gefunden!"
     fi
+else
+    echo "===> HINWEIS: Kein passender Patch-Quellordner gefunden."
 fi
 
 # =================================================================
