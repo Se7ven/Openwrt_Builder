@@ -1,6 +1,6 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Mit dediziertem package/custom Ordner & Konfliktbereinigung
+# Prepare Script - Universell mit Patch-Anwendung für alle Quellen
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
@@ -20,12 +20,39 @@ fi
 echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
 cd "$OPENWRT_DIR"
 
+# =================================================================
+# 1. MT5000 Patches für ALLE Quellen universell anwenden
+# =================================================================
+echo "===> Prüfe und wende MT5000-Patches an..."
+
+if [ "$SDK_BRANCH_TYPE" = "stable" ] || [[ "$SDK_BRANCH_TYPE" =~ 25\.12 ]]; then
+    PATCH_DIR="../patches-25.12"
+    echo "Verwende Patch-Ordner für Stable/25.12 (Kernel 6.12): $PATCH_DIR"
+else
+    PATCH_DIR="../patches"
+    echo "Verwende Patch-Ordner für Master/Main (Kernel 6.18): $PATCH_DIR"
+fi
+
+if [ -d "$PATCH_DIR" ]; then
+    for patch in "$PATCH_DIR"/*.patch; do
+        [ -e "$patch" ] || continue
+        echo "Wende Patch an: $(basename "$patch")"
+        git apply "$patch" || git apply --remerge -3 "$patch"
+    done
+    echo "===> Alle MT5000-Patches erfolgreich angewendet."
+else
+    echo "===> WARNUNG: Patch-Ordner '$PATCH_DIR' nicht im Hauptverzeichnis gefunden!"
+fi
+# =================================================================
+
+# 2. filogic.mk injizieren (falls vorhanden)
 if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
     echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
     mkdir -p "target/linux/mediatek/image"
     cp -f ../board/target/linux/mediatek/image/filogic.mk "target/linux/mediatek/image/"
 fi
 
+# 3. CUSTOM PACKAGES ORDNER EINBINDEN & KONFLIKTE BEREINIGEN
 CUSTOM_DIR="package/custom"
 echo "===> Prepare custom packages directory: $CUSTOM_DIR"
 rm -rf "$CUSTOM_DIR"
@@ -41,6 +68,7 @@ for keyword in "${CONFLICTING_KEYWORDS[@]}"; do
 done
 rm -rf tmp/.config-package.in 2>/dev/null || true
 
+# 4. Feeds aktualisieren und installieren
 echo "===> Updating and installing feeds..."
 ./scripts/feeds update -a && ./scripts/feeds install -a
 if [ $? -ne 0 ]; then
@@ -48,6 +76,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# 5. Radikales Löschen der Kconfig-Störenfriede nach Feed-Install
 echo "===> Deleting recursive dependency packages completely..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
@@ -58,6 +87,7 @@ rm -rf package/feeds/*/weechat 2>/dev/null || true
 rm -rf package/feeds/*/squeezelite* 2>/dev/null || true
 rm -rf tmp/ 2>/dev/null || true
 
+# 6. Config-Datei ermitteln und kopieren
 CONFIG_FILE=""
 if [ "$SDK_REPO" = "openwrt" ]; then
     if [ -f "../config/mt5000.config" ]; then
@@ -85,8 +115,8 @@ else
     touch .config
 fi
 
+# 7. Target-Konfiguration für GL-MT5000 bereinigen und erzwingen
 echo "===> Sanitizing and forcing GL-MT5000 target configuration in .config..."
-
 sed -i '/CONFIG_TARGET_BOARD/d' .config
 sed -i '/CONFIG_TARGET_SUBTARGET/d' .config
 sed -i '/CONFIG_TARGET_IT/d' .config
@@ -104,6 +134,7 @@ CONFIG_TARGET_SUBTARGET="filogic"
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
+# 8. Netzwerkkonfiguration für GL-MT5000 hinterlegen (LAN 192.168.100.1 / WAN eth1 192.168.10.1)
 echo "===> Konfiguriere Netzwerk & Basis für GL-MT5000..."
 mkdir -p package/base-files/files/etc/config
 cat << 'EOF' > package/base-files/files/etc/config/network
@@ -132,6 +163,7 @@ config interface 'wan'
 	option netmask '255.255.255.0'
 EOF
 
+# 9. Konfigurationsabgleich
 echo "===> Running clean non-interactive config sync..."
 export TERM=dumb
 export DEBIAN_FRONTEND=noninteractive
