@@ -27,12 +27,11 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     
-    # Erzeugt dynamisch genau deine 4 Ordnernamen:
-    # z.B. openwrt_main, openwrt_stable, immortalwrt_main, immortalwrt_stable
+    # Dynamische Ordnerbenennung: immortalwrt + main wird zu immortalwrt_master
     env:
       INPUT_SDK_REPO: ${{ inputs.sdk_repo }}
       INPUT_SDK_BRANCH: ${{ inputs.sdk_branch }}
-      BUILD_DIR: "${{ inputs.sdk_repo }}_${{ inputs.sdk_branch }}"
+      BUILD_DIR: "${{ inputs.sdk_repo }}_${{ inputs.sdk_repo == 'immortalwrt' && inputs.sdk_branch == 'main' && 'master' || inputs.sdk_branch }}"
 
     steps:
       - name: Checkout Repository
