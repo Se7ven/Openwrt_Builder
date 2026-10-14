@@ -46,8 +46,14 @@ jobs:
           cd openwrt
           export TERM=dumb
           export DEBIAN_FRONTEND=noninteractive
-          ./scripts/config/conf --olddefconfig .config
-          make world -j$(nproc) || make world -j1 V=s
+          
+          # 1. Zuerst alle Pakete herunterladen (sichtbar!)
+          echo "===> Downloading packages..."
+          make download -j8 V=s
+          
+          # 2. Danach kompilieren (mit V=s siehst du endlich jeden Schritt!)
+          echo "===> Starting build process..."
+          make world -j$(nproc) V=s || make world -j1 V=s
 
       - name: Rename Firmware Images
         env:
