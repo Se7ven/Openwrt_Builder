@@ -7,7 +7,6 @@ SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 SDK_BRANCH_TYPE="${INPUT_SDK_BRANCH:-main}"
 echo "===> Running preparation for repository: $SDK_REPO (Branch-Type: $SDK_BRANCH_TYPE)"
 
-# Finde das Quellverzeichnis (entweder openwrt oder immortalwrt)
 OPENWRT_DIR=""
 if [ -d "openwrt" ]; then
     OPENWRT_DIR="openwrt"
@@ -21,29 +20,17 @@ fi
 echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
 cd "$OPENWRT_DIR"
 
-# 1. DTS-Injektion
-#if [ -d "../board/target/linux/mediatek/dts" ]; then
-#    echo "===> Injecting custom DTS files for GL-MT5000..."
-#    mkdir -p "target/linux/mediatek/dts"
-#    cp -rf ../board/target/linux/mediatek/dts/* "target/linux/mediatek/dts/"
-#fi
-
-# 2. filogic.mk injizieren
 if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
     echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
     mkdir -p "target/linux/mediatek/image"
     cp -f ../board/target/linux/mediatek/image/filogic.mk "target/linux/mediatek/image/"
 fi
 
-# =================================================================
-# 3. CUSTOM PACKAGES ORDNER EINBINDEN
-# =================================================================
 CUSTOM_DIR="package/custom"
 echo "===> Prepare custom packages directory: $CUSTOM_DIR"
 rm -rf "$CUSTOM_DIR"
 mkdir -p "$CUSTOM_DIR"
 
-# Konfligierende Makefiles im gesamten Baum (außerhalb von custom) bereinigen
 CONFLICTING_KEYWORDS=("weechat" "squeezelite" "qt5" "openvswitch")
 for keyword in "${CONFLICTING_KEYWORDS[@]}"; do
     find . -type f -name "Makefile" ! -path "$CUSTOM_DIR/*" -print0 | while IFS= read -r -d $'\0' file; do
@@ -53,9 +40,7 @@ for keyword in "${CONFLICTING_KEYWORDS[@]}"; do
     done
 done
 rm -rf tmp/.config-package.in 2>/dev/null || true
-# =================================================================
 
-# 4. Feeds aktualisieren und installieren
 echo "===> Updating and installing feeds..."
 ./scripts/feeds update -a && ./scripts/feeds install -a
 if [ $? -ne 0 ]; then
@@ -63,9 +48,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# =================================================================
-# 5. Radikales Löschen der Kconfig-Störenfriede nach Feed-Install
-# =================================================================
 echo "===> Deleting recursive dependency packages completely..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
@@ -75,9 +57,7 @@ rm -rf package/feeds/*/qt5 2>/dev/null || true
 rm -rf package/feeds/*/weechat 2>/dev/null || true
 rm -rf package/feeds/*/squeezelite* 2>/dev/null || true
 rm -rf tmp/ 2>/dev/null || true
-# =================================================================
 
-# 6. Config-Datei ermitteln und kopieren
 CONFIG_FILE=""
 if [ "$SDK_REPO" = "openwrt" ]; then
     if [ -f "../config/mt5000.config" ]; then
@@ -90,6 +70,10 @@ else
         CONFIG_FILE="../config/immortalwrt.config"
     elif [ -f "../immortalwrt.config" ]; then
         CONFIG_FILE="../immortalwrt.config"
+    elif [ -f "../config/mt500.config" ]; then
+        CONFIG_FILE="../config/mt500.config"
+    elif [ -f "../mt500.config" ]; then
+        CONFIG_FILE="../mt500.config"
     fi
 fi
 
@@ -101,7 +85,6 @@ else
     touch .config
 fi
 
-# 7. Target-Konfiguration für GL-MT5000 bereinigen und erzwingen
 echo "===> Sanitizing and forcing GL-MT5000 target configuration in .config..."
 
 sed -i '/CONFIG_TARGET_BOARD/d' .config
@@ -121,7 +104,6 @@ CONFIG_TARGET_SUBTARGET="filogic"
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 EOF
 
-# 8. Netzwerkkonfiguration für GL-MT5000 hinterlegen
 echo "===> Konfiguriere Netzwerk & Basis für GL-MT5000..."
 mkdir -p package/base-files/files/etc/config
 cat << 'EOF' > package/base-files/files/etc/config/network
@@ -150,19 +132,13 @@ config interface 'wan'
 	option netmask '255.255.255.0'
 EOF
 
-# 9. Sauberen, non-interaktiven Konfigurationsabgleich durchführen
 echo "===> Running clean non-interactive config sync..."
-
 export TERM=dumb
 export DEBIAN_FRONTEND=noninteractive
-
 make defconfig
 
-# 10. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
 grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
 
-# Zurück ins Root-Verzeichnis wechseln
 cd ..
-
 echo "===> Preparation completed successfully."
