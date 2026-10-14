@@ -165,7 +165,7 @@ sed -i '/^#.*is not set$/!{/=/!d}' .config 2>/dev/null || true
 
 export TERM=dumb
 export DEBIAN_FRONTEND=noninteractive
-yes "" | make olddefconfig
+make defconfig
 
 # 9. Kontrolle
 echo "===> Verifiziere aktives Device in .config:"
