@@ -20,6 +20,10 @@ on:
           - main
           - stable
 
+# WICHTIG: Erlaubnis für GitHub Actions, Releases im Repository zu erstellen
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -51,7 +55,7 @@ jobs:
           echo "===> Downloading packages..."
           make download -j8 V=s
           
-          # 2. Danach kompilieren (mit V=s siehst du endlich jeden Schritt!)
+          # 2. Danach kompilieren (mit V=s)
           echo "===> Starting build process..."
           make world -j$(nproc) V=s || make world -j1 V=s
 
@@ -62,8 +66,20 @@ jobs:
         run: |
           bash ./sh/finalize.sh
 
+      # Behält das alte Artifact-System als Backup (optional, tut aber nicht weh)
       - name: Upload Firmware Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: gl-mt5000-firmware-${{ inputs.sdk_repo }}-${{ inputs.sdk_branch }}
           path: openwrt/bin/targets/mediatek/filogic/*-gl-mt5000-*
+
+      # NEU: Erstellt offizielles GitHub Release und lädt die Dateien direkt ins Repo
+      - name: Create Release & Upload Firmware to Repository
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: Firmware-${{ inputs.sdk_repo }}-${{ inputs.sdk_branch }}-${{ github.run_number }}
+          name: "Auto-Build: ${{ inputs.sdk_repo }} (${{ inputs.sdk_branch }}) - GL-MT5000"
+          body: "Automatisch generierte Firmware für den GL.iNet GL-MT5000 (Build-Nummer: ${{ github.run_number }})."
+          files: openwrt/bin/targets/mediatek/filogic/*-gl-mt5000-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
