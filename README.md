@@ -15,18 +15,22 @@ This repository contains two distinct build architectures tailored for the **GL.
     *   `sh/finalize.sh`: Post-build script for organizing, renaming, and packaging final firmware artifacts with timestamps.
 
 ### 2. The Vanilla Source & Patch Builder (Patch-Based Builder)
-*   **Purpose:** Pulls upstream vanilla OpenWrt or ImmortalWrt source code directly and applies custom kernel patches, device tree sources (DTS), and driver modifications during the build process using dedicated helper scripts.
-*   **Assigned Scripts:**
+*   **Purpose:** Pulls upstream vanilla OpenWrt or ImmortalWrt source code directly and applies custom kernel patches, device tree sources (DTS), and driver modifications during the build process using dedicated helper scripts and patch directories.
+*   **Assigned Scripts & Folders:**
     *   `sh/clone.sh`: Helper script for cloning specific upstream repositories and setting up isolated target directories.
     *   `sh/prepare.sh`: Prepares the source tree, injects custom device tree sources (DTS), and applies necessary kernel patches.
     *   `sh/finalize.sh`: Finalizes and packages the build artifacts.
 
-## 📁 Repository Structure
+## 📁 Repository & Folder Structure
 
-*   `.github/workflows/`: Contains all automated CI/CD build and release pipelines.
+*   `.github/workflows/`: Contains all automated CI/CD build and release pipelines (including the universal builder and imagebuilder).
+*   `board/`: Contains hardware-specific board definitions, device configurations, or device tree assets.
 *   `config/`: Firmware-specific configuration profiles (`mt5000.config` and `immortalwrt.config`).
-*   `sh/`: Beherbergt alle modularen Hilfs- und Anpassungsskripte.
-*   `files/`: Rootfs overlay copied directly into the target file system.
+*   `default-settings-m0eak/`: Custom default settings package for personal configurations.
+*   `files/`: Rootfs overlay copied directly into the target file system during the build.
+*   `patches/`: General kernel and source code patches applied during vanilla builds.
+*   `patches-25.12/`: Version-specific patch sets tailored for the 25.12 stable release branches.
+*   `sh/`: Beherbergt alle modularen Hilfs- und Anpassungsskripte (`clone.sh`, `prepare.sh`, `scripts-part1.sh`, `scripts-part2.sh`, `finalize.sh`).
 
 ## 🙏 Acknowledgments
 
@@ -58,24 +62,28 @@ Dieses Repository enthält zwei unterschiedliche Build-Architekturen, die spezie
     *   `sh/finalize.sh`: Post-Build-Skript zum Umbenennen, Organisieren und Verpacken der finalen Firmware-Artefakte mit Zeitstempel.
 
 ### 2. Der Vanilla Source & Patch Builder (Patch-basierter Builder)
-*   **Zweck:** Holt direkt den Upstream-Quellcode von Vanilla OpenWrt oder ImmortalWrt ab und wendet spezifische Kernel-Patches, Device Tree Sources (DTS) und Treiberanpassungen während des Build-Prozesses über dedizierte Hilfsskripte an.
-*   **Zuordnete Skripte:**
+*   **Zweck:** Holt direkt den Upstream-Quellcode von Vanilla OpenWrt oder ImmortalWrt ab und wendet spezifische Kernel-Patches, Device Tree Sources (DTS) und Treiberanpassungen während des Build-Prozesses über dedizierte Hilfsskripte und Patch-Ordner an.
+*   **Zuordnete Skripte & Ordner:**
     *   `sh/clone.sh`: Hilfsskript zum Klonen spezifischer Upstream-Repositories und Einrichten isolierter Zielverzeichnisse.
     *   `sh/prepare.sh`: Bereitet den Quellbaum vor, injiziert benutzerdefinierte Device Tree Sources (DTS) und wendet Kernel-Patches an.
     *   `sh/finalize.sh`: Verpackt und bereitet die Artefakte für den Release vor.
 
-## 📁 Verzeichnisstruktur
+## 📁 Verzeichnis- & Ordnerstruktur
 
-*   `.github/workflows/`: Enthält alle automatisierten CI/CD-Pipelines für die Builds und Releases.
+*   `.github/workflows/`: Enthält alle automatisierten CI/CD-Pipelines für die Builds und Releases (inkl. Universal-Builder und Imagebuilder).
+*   `board/`: Beinhaltet hardwarespezifische Board-Definitionen, Gerätekonfigurationen oder Device-Tree-Assets.
 *   `config/`: Firmware-spezifische Konfigurationsprofile (`mt5000.config` und `immortalwrt.config`).
-*   `sh/`: Beherbergt alle modularen Hilfs- und Anpassungsskripte.
-*   `files/`: Rootfs-Overlay, das direkt in das Ziel-Dateisystem kopiert wird.
+*   `default-settings-m0eak/`: Paket mit benutzerdefinierten Standardeinstellungen für persönliche Konfigurationen.
+*   `files/`: Rootfs-Overlay, das während des Build-Vorgangs direkt in das Ziel-Dateisystem kopiert wird.
+*   `patches/`: Allgemeine Kernel- und Quellcode-Patches, die bei Vanilla-Builds angewendet werden.
+*   `patches-25.12/`: Versionsspezifische Patch-Sammlungen, die für die stabilen 25.12-Zweige ausgelegt sind.
+*   `sh/`: Beherbergt alle modularen Hilfs- und Anpassungsskripte (`clone.sh`, `prepare.sh`, `scripts-part1.sh`, `scripts-part2.sh`, `finalize.sh`).
 
 ## 🙏 Danksagungen
 
-*   **m0eak** (für die Basisstruktur und das Template-Design)
-*   **Kitsune2077** (für Beiträge und Verknüpfungen aus dem `Kitsune2077/mt5000-immortalwrt` Repository)
-*   [GL.iNet Tech](https://github.com/GLiNet-Tech) (für hardwarespezifische Patches und Kernel-Quellen)
+*   **m0eak** (for the base structure and template design)
+*   **Kitsune2077** (for `Kitsune2077/mt5000-immortalwrt` repository contributions and references)
+*   [GL.iNet Tech](https://github.com/GLiNet-Tech) (for hardware-specific patches and kernel sources)
 *   [OpenWrt Project](https://openwrt.org/)
 *   [ImmortalWrt Project](https://immortalwrt.org/)
 
