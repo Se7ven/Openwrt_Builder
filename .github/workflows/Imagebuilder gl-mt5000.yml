@@ -9,11 +9,11 @@ on:
         default: 'all'
         type: choice
         options:
-          - all
           - immortalwrt_master
           - immortalwrt_stable
           - openwrt_main
           - openwrt_stable
+          - all
 
 permissions:
   contents: write
