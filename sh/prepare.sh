@@ -80,11 +80,17 @@ if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
     cp -f ../board/target/linux/mediatek/image/filogic.mk "target/linux/mediatek/image/"
 fi
 
-# 2b. mt7987a-gl-mt5000.dts direkt aus dem board-Ordner injizieren[cite: 1]
+# 2b. mt7987a-gl-mt5000.dts in alle relevanten Pfade injizieren, damit relative Compiler-Pfeile greifen
 if [ -f "../board/target/linux/mediatek/dts/mt7987a-gl-mt5000.dts" ]; then
-    echo "===> Injecting custom mt7987a-gl-mt5000.dts for GL-MT5000..."[cite: 1]
+    echo "===> Injecting custom mt7987a-gl-mt5000.dts into all required paths..."
+    
+    # Standard-Pfad im Kernel-DTS-Baum
     mkdir -p "target/linux/mediatek/dts"
-    cp -f ../board/target/linux/mediatek/dts/mt7987a-gl-mt5000.dts "target/linux/mediatek/dts/"[cite: 1]
+    cp -f ../board/target/linux/mediatek/dts/mt7987a-gl-mt5000.dts "target/linux/mediatek/dts/"
+    
+    # Zusätzlich im Image-Ordner als dts/, damit ../dts/ greift
+    mkdir -p "target/linux/mediatek/image/dts"
+    cp -f ../board/target/linux/mediatek/dts/mt7987a-gl-mt5000.dts "target/linux/mediatek/image/dts/"
 fi
 
 # 3. CUSTOM PACKAGES ORDNER EINBINDEN & KONFLIKTE BEREINIGEN
