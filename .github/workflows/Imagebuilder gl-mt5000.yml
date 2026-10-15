@@ -27,12 +27,11 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     
-    # Dynamische Ordnerbenennung und Tag-Präfix direkt über Umgebungsvariablen
+    # Dynamische Ordnerbenennung: immortalwrt + main wird zu immortalwrt_master
     env:
       INPUT_SDK_REPO: ${{ inputs.sdk_repo }}
       INPUT_SDK_BRANCH: ${{ inputs.sdk_branch }}
       BUILD_DIR: "${{ inputs.sdk_repo }}_${{ inputs.sdk_repo == 'immortalwrt' && inputs.sdk_branch == 'main' && 'master' || inputs.sdk_branch }}"
-      TAG_PREFIX: "${{ inputs.sdk_repo }}-${{ inputs.sdk_branch == 'main' && (inputs.sdk_repo == 'immortalwrt' && 'master' || 'main') || 'stable' }}"
 
     steps:
       - name: Checkout Repository
@@ -75,7 +74,7 @@ jobs:
         with:
           tag_name: Firmware-${{ inputs.sdk_repo }}-${{ inputs.sdk_branch }}-${{ github.run_number }}
           name: "Auto-Build: ${{ inputs.sdk_repo }} (${{ inputs.sdk_branch }}) - GL-MT5000"
-          body: "Automatisch generierte Patch-Build Firmware für den GL.iNet GL-MT5000 (${{ inputs.sdk_repo }} - ${{ inputs.sdk_branch }})."
+          body: "Automatisch generierte Firmware für den GL.iNet GL-MT5000 (${{ inputs.sdk_repo }} - ${{ inputs.sdk_branch }})."
           files: ${{ env.BUILD_DIR }}/bin/targets/mediatek/filogic/*-gl-mt5000-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
