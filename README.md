@@ -14,19 +14,18 @@ This repository contains two distinct build architectures tailored for the **GL.
     *   `sh/scripts-part2.sh`: Post-feed customization script that clones third-party packages (Passwall, MosDNS, Lucky, themes, etc.) into `package/custom`, resolves Makefile conflicts, and handles network layout and branding.
     *   `sh/finalize.sh`: Post-build script for organizing, renaming, and packaging final firmware artifacts with timestamps.
 
-### 2. The Vanilla Source & Patch Builder (Custom Workflow)
-*   **Purpose:** Pulls upstream vanilla OpenWrt or ImmortalWrt source code directly and applies custom kernel patches, device tree sources (DTS), and driver modifications during the build process.
+### 2. The Vanilla Source & Patch Builder (Patch-Based Builder)
+*   **Purpose:** Pulls upstream vanilla OpenWrt or ImmortalWrt source code directly and applies custom kernel patches, device tree sources (DTS), and driver modifications during the build process using dedicated helper scripts.
 *   **Assigned Scripts:**
     *   `sh/clone.sh`: Helper script for cloning specific upstream repositories and setting up isolated target directories.
     *   `sh/prepare.sh`: Prepares the source tree, injects custom device tree sources (DTS), and applies necessary kernel patches.
-    *   `sh/scripts-part1.sh` & `sh/scripts-part2.sh`: Re-used for feeds, custom package injections, and branding.
     *   `sh/finalize.sh`: Finalizes and packages the build artifacts.
 
 ## 📁 Repository Structure
 
 *   `.github/workflows/`: Contains all automated CI/CD build and release pipelines.
 *   `config/`: Firmware-specific configuration profiles (`mt5000.config` and `immortalwrt.config`).
-*   `sh/`: Contains all modular helper and customization scripts.
+*   `sh/`: Beherbergt alle modularen Hilfs- und Anpassungsskripte.
 *   `files/`: Rootfs overlay copied directly into the target file system.
 
 ## 🙏 Acknowledgments
@@ -59,11 +58,10 @@ Dieses Repository enthält zwei unterschiedliche Build-Architekturen, die spezie
     *   `sh/finalize.sh`: Post-Build-Skript zum Umbenennen, Organisieren und Verpacken der finalen Firmware-Artefakte mit Zeitstempel.
 
 ### 2. Der Vanilla Source & Patch Builder (Patch-basierter Builder)
-*   **Zweck:** Holt direkt den Upstream-Quellcode von Vanilla OpenWrt oder ImmortalWrt ab und wendet spezifische Kernel-Patches, Device Tree Sources (DTS) und Treiberanpassungen während des Build-Prozesses an.
+*   **Zweck:** Holt direkt den Upstream-Quellcode von Vanilla OpenWrt oder ImmortalWrt ab und wendet spezifische Kernel-Patches, Device Tree Sources (DTS) und Treiberanpassungen während des Build-Prozesses über dedizierte Hilfsskripte an.
 *   **Zuordnete Skripte:**
     *   `sh/clone.sh`: Hilfsskript zum Klonen spezifischer Upstream-Repositories und Einrichten isolierter Zielverzeichnisse.
     *   `sh/prepare.sh`: Bereitet den Quellbaum vor, injiziert benutzerdefinierte Device Tree Sources (DTS) und wendet Kernel-Patches an.
-    *   `sh/scripts-part1.sh` & `sh/scripts-part2.sh`: Kommen hier ebenfalls für Feeds, Zusatzpakete und Branding zum Einsatz.
     *   `sh/finalize.sh`: Verpackt und bereitet die Artefakte für den Release vor.
 
 ## 📁 Verzeichnisstruktur
