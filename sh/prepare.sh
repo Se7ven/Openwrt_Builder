@@ -46,7 +46,7 @@ else
     echo "Verwende Patch-Ordner für Master/Main (Kernel 6.18): $PATCH_DIR"
 fi
 
-# Schutzprüfung: Wenn die MT5000 DTS bereits existiert, wurden die Patches schon angewendet
+# Schutzprüfung: Wenn die MT5000 DTS bereits existiert, wurden the Patches schon angewendet
 if [ -f "target/linux/mediatek/dts/mt7987a-gl-mt5000.dts" ]; then
     echo "===> HINWEIS: MT5000 Patches wurden in diesem Verzeichnis bereits angewendet. Überspringe Patch-Durchlauf."
 else
@@ -93,11 +93,15 @@ if [ -f "../board/target/linux/mediatek/dts/mt7987a-gl-mt5000.dts" ]; then
     cp -f ../board/target/linux/mediatek/dts/mt7987a-gl-mt5000.dts "target/linux/mediatek/image/dts/"
 fi
 
-# 3. CUSTOM PACKAGES ORDNER EINBINDEN & KONFLIKTE BEREINIGEN
+# 3. CUSTOM PACKAGES ORDNER EINBINDEN (Inklusive Footstrap Theme) & KONFLIKTE BEREINIGEN
 CUSTOM_DIR="package/custom"
 echo "===> Prepare custom packages directory: $CUSTOM_DIR"
 rm -rf "$CUSTOM_DIR"
 mkdir -p "$CUSTOM_DIR"
+
+# Footstrap Theme herunterladen, damit es direkt im Custom-Ordner liegt
+echo "===> Cloning luci-theme-footstrap..."
+git clone --depth 1 https://github.com/VizzleTF/luci-theme-footstrap.git "$CUSTOM_DIR/luci-theme-footstrap"
 
 CONFLICTING_KEYWORDS=("weechat" "squeezelite" "qt5" "openvswitch")
 for keyword in "${CONFLICTING_KEYWORDS[@]}"; do
@@ -156,7 +160,7 @@ else
     touch .config
 fi
 
-# 7. Target-Konfiguration für GL-MT5000 bereinigen und erzwingen
+# 7. Target-Konfiguration für GL-MT5000 bereinigen, erzwingen & Footstrap aktivieren
 echo "===> Sanitizing and forcing GL-MT5000 target configuration in .config..."
 sed -i '/CONFIG_TARGET_BOARD/d' .config
 sed -i '/CONFIG_TARGET_SUBTARGET/d' .config
@@ -173,10 +177,11 @@ CONFIG_TARGET_mediatek_filogic=y
 CONFIG_TARGET_BOARD="mediatek"
 CONFIG_TARGET_SUBTARGET="filogic"
 CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
+CONFIG_PACKAGE_luci-theme-footstrap=y
 EOF
 
-# 8. Netzwerkkonfiguration für GL-MT5000 hinterlegen (LAN 192.168.100.1 / WAN eth1 192.168.10.1)
-echo "===> Konfiguriere Netzwerk & Basis für GL-MT5000..."
+# 8. Netzwerkkonfiguration für GL-MT5000 hinterlegen & Footstrap als Standard-Theme setzen
+echo "===> Konfiguriere Netzwerk, Basis & Footstrap-Theme für GL-MT5000..."
 mkdir -p package/base-files/files/etc/config
 cat << 'EOF' > package/base-files/files/etc/config/network
 config interface 'loopback'
@@ -203,6 +208,15 @@ config interface 'wan'
 	option ipaddr '192.168.10.1'
 	option netmask '255.255.255.0'
 EOF
+
+# Footstrap UCI-Default setzen
+mkdir -p package/base-files/files/etc/uci-defaults/
+cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
+uci set luci.main.mediaurlbase='/luci-static/footstrap'
+uci commit luci
+exit 0
+EOF
+chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
 # 9. Konfigurationsabgleich
 echo "===> Running clean non-interactive config sync..."
