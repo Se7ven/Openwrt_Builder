@@ -178,7 +178,7 @@ jobs:
       - name: Schritt 4 - Finalisieren & Umbenennen (finalize.sh)
         if: steps.compile.outputs.compile == 'success'
         run: |
-          bash sh/finalize.sh
+          bash sh/finalize.sh "${{ matrix.env_key }}"
 
       - name: Release erstellen und hochladen
         uses: softprops/action-gh-release@v2
