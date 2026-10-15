@@ -190,7 +190,7 @@ jobs:
           name: GL-MT5000 (${{ matrix.env_key }}) Build ${{ steps.compile.outputs.file-date }}
           body: Maßgeschneiderter GL-MT5000 Build basierend auf den originalen GL-iNet Quellen mit Part1 und Part2 Anpassungen (${{ matrix.env_key }}).
           files: |
-            */bin/targets/*/*/*sysupgrade*
-            */bin/targets/*/*/*factory*
-            */bin/targets/*/*/*manifest*
-            */bin/targets/*/*/*sha256sums
+            ${{ matrix.env_key }}/bin/targets/*/*/*sysupgrade*
+            ${{ matrix.env_key }}/bin/targets/*/*/*factory*
+            ${{ matrix.env_key }}/bin/targets/*/*/*manifest*
+            ${{ matrix.env_key }}/bin/targets/*/*/*sha256sums
