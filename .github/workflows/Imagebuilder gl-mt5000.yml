@@ -24,6 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        target_env: ${{ inputs.target_env == 'all' && fromJSON('["immortalwrt_master", "immortalwrt_stable", "openwrt_main", "openwrt_stable"]') || fromJSON(format('["{0}"]', inputs.target_env)) }}
         include:
           - target_env: immortalwrt_master
             sdk_repo: "immortalwrt"
@@ -45,9 +46,6 @@ jobs:
             sdk_branch: "stable"
             build_dir: "openwrt_stable"
             tag_prefix: "openwrt-stable"
-
-    # Filtert die Matrix: Entweder laufen alle (bei 'all') oder nur der gewählte Ast
-    if: ${{ github.event.inputs.target_env == 'all' || matrix.target_env == github.event.inputs.target_env }}
 
     env:
       INPUT_SDK_REPO: ${{ matrix.sdk_repo }}
@@ -80,7 +78,7 @@ jobs:
           
           echo "===> Starting build process..."
           make world -j"$NPROC" || make world -j1 V=s
-         
+
       - name: Rename Firmware Images
         run: |
           bash ./sh/finalize.sh
