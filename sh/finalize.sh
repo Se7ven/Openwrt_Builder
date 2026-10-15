@@ -5,12 +5,19 @@
 
 echo "--- Finalize: Starte Umbenennung der Firmware-Artefakte ---"
 
-# 1. Zielverzeichnis für die Binaries finden
+# Übergebenes Argument (Verzeichnis) nutzen, sonst Fallback auf aktuelles Verzeichnis oder Workspace
+TARGET_BASE="${1:-.}"
+
 IMAGE_DIR=""
-if [ -d "bin/targets/mediatek/filogic" ]; then
+
+# Mögliche Pfade systematisch durchprobieren, egal aus welchem Workflow das Skript aufgerufen wird
+if [ -d "$TARGET_BASE/bin/targets/mediatek/filogic" ]; then
+    IMAGE_DIR="$TARGET_BASE/bin/targets/mediatek/filogic"
+elif [ -d "bin/targets/mediatek/filogic" ]; then
     IMAGE_DIR="bin/targets/mediatek/filogic"
 else
-    FOUND_PATH=$(find . -maxdepth 4 -type d -path "*/bin/targets/mediatek/filogic" | head -n 1)
+    # Automatische Tiefensuche nach dem Zielordner (deckt /workdir/ und Unterordner ab)
+    FOUND_PATH=$(find . "$TARGET_BASE" /workdir -maxdepth 5 -type d -path "*/bin/targets/mediatek/filogic" 2>/dev/null | head -n 1)
     if [ -n "$FOUND_PATH" ]; then
         IMAGE_DIR="$FOUND_PATH"
     else
@@ -61,7 +68,7 @@ for f in *.manifest; do
     fi
 done
 
-# 6. sha256sums umbenennen (optional, falls gewünscht - kann auch so bleiben, aber mit Präfix ist es sauberer)
+# 6. sha256sums umbenennen
 for f in sha256sums; do
     if [ -f "$f" ]; then
         TARGET_NAME="${PREFIX}-sha256sums"
