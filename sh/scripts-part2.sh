@@ -1,39 +1,22 @@
 #!/bin/bash
 #
 # Dateiname: scripts-part2.sh
-# Beschreibung: OpenWrt DIY Skript Teil 2
+# Beschreibung: OpenWrt DIY Skript Teil 2 (Bereinigt)
 #
 
 TARGET_DIR="${PWD}/package/custom"
 
 declare -A REPOS=(
-    ["https://github.com/sbwml/luci-app-mosdns"]=""
-    ["https://github.com/chenmozhijin/turboacc"]=""
-    ["https://github.com/gdy666/luci-app-lucky"]=""
     ["https://github.com/m0eak/fancontrol"]=""
     ["https://github.com/animegasan/luci-app-wolplus"]=""
-    ["https://github.com/0x676e67/luci-theme-design"]="js"
-    ["https://github.com/0x676e67/luci-app-design-config.git"]=""
-    ["https://github.com/nikkinikki-org/OpenWrt-nikki"]=""
     ["https://github.com/sirpdboy/luci-app-partexp"]=""
-    ["https://github.com/pymumu/luci-app-smartdns"]=""
-    ["https://github.com/pymumu/smartdns"]=""
-    ["https://github.com/sbwml/v2ray-geodata"]=""
-    ["https://github.com/vernesong/OpenClash.git"]=""
-    ["https://github.com/eamonxg/luci-theme-aurora"]=""
-    ["https://github.com/eamonxg/luci-theme-shadcn.git"]=""
-    ["https://github.com/eamonxg/luci-app-aurora-config"]=""
     ["https://github.com/NONGFAH/luci-app-athena-led.git"]=""
     ["https://github.com/Tokisaki-Galaxy/luci-app-tailscale-community.git"]=""
     ["https://github.com/m0eak/openwrt-gecoosac.git"]=""
     ["https://github.com/miaoermua/luci-app-leigod-acc.git"]=""
     ["https://github.com/EasyTier/luci-app-easytier"]="v2.6.4"
-    ["https://github.com/Openwrt-Passwall/openwrt-passwall2"]=""
-    ["https://github.com/Openwrt-Passwall/openwrt-passwall"]=""
-    ["https://github.com/Openwrt-Passwall/openwrt-passwall-packages"]=""
     ["https://github.com/10000ge10000/luci-app-openclaw"]=""
     ["https://github.com/Slava-Shchipunov/awg-openwrt"]=""
-    ["https://github.com/QiuSimons/luci-app-daed"]=""
     ["https://github.com/sirpdboy/luci-app-ddns-go.git"]=""
     ["https://github.com/gaoderby/luci-app-kms.git"]=""
     ["https://github.com/sbwml/luci-app-ramfree.git"]=""
@@ -42,14 +25,7 @@ declare -A REPOS=(
 )
 
 CONFLICTING_MAKEFILE_KEYWORDS=(
-    "mosdns"
-    "openclash"
-    "luci-app-lucky"
-    "smartdns"
-    # "v2ray-geodata" -> Entfernt, damit Passwall2 die Geo-Daten findet
-    "xray-core"
-    "daed"
-    "ddns-go"
+    # Keine Proxy-Keywords mehr nötig, aber Platzhalter für künftige Konflikte
 )
 
 patch_rust_makefile() {
@@ -103,12 +79,7 @@ reset_custom_package_dir
 remove_conflicting_makefiles
 clone_custom_repos
 
-# Xray-Core aus Passwall-Paketen entfernen und Makefiles bereinigen
-rm -rf "$TARGET_DIR/openwrt-passwall-packages/xray-core" 2>/dev/null || true
-remove_conflicting_makefiles
-
 # Kollidierende Standard-Pakete entfernen
-rm -rf feeds/packages/net/openvswitch package/feeds/packages/openvswitch 2>/dev/null || true
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
 # 2. MT5000 SPEZIFISCHE KONFIGURATIONEN & BRANDING
@@ -140,6 +111,8 @@ config interface 'wan'
 	option proto 'dhcp'
 EOF
 
+    # Da die Custom-Themes (Aurora/Shadcn) entfernt wurden, greift wieder das Standard-Bootstrap-Theme
+    # Footstrap als Standard-Theme erzwingen
     mkdir -p package/base-files/files/etc/uci-defaults/
     cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 uci set luci.main.mediaurlbase='/luci-static/footstrap'
