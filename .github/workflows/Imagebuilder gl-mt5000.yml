@@ -60,7 +60,7 @@ jobs:
 
       - name: Rename Firmware Images
         run: |
-          bash ./sh/finalize.sh
+          bash ./sh/finalize.sh "${{ env.BUILD_DIR }}"
 
       - name: Upload Firmware Artifacts
         uses: actions/upload-artifact@v4
