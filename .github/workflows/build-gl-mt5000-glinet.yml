@@ -66,8 +66,6 @@ jobs:
 
     name: GL-MT5000 Build (${{ matrix.env_key }})
     env:
-      INPUT_SDK_REPO: ${{ matrix.sdk_repo }}
-      INPUT_SDK_BRANCH: ${{ matrix.sdk_branch }}
       WORKFLOW_NAME: ${{ matrix.env_key }}
 
     steps:
@@ -97,23 +95,20 @@ jobs:
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
 
-      - name: Schritt 1 - Quellcode klonen (clone.sh)
+      - name: Schritt 1 - Offiziellen GL.iNet MT5000 Quellbaum klonen
         working-directory: /workdir
         run: |
-          bash "$GITHUB_WORKSPACE/sh/clone.sh"
+          TARGET_DIR="${{ matrix.env_key }}"
+          echo "===> Kloniere GL.iNet MT5000 Quellbaum (Branch: mt5000) nach $TARGET_DIR"
+          git clone --depth 1 -b mt5000 https://github.com/GLiNet-Tech/openwrt.git "$TARGET_DIR"
+          ln -sf "/workdir/$TARGET_DIR" "$GITHUB_WORKSPACE/$TARGET_DIR"
 
       - name: Schritt 2 - Feeds & scripts-part1.sh ausführen
         run: |
-          if [ "${{ matrix.sdk_repo }}" = "immortalwrt" ] && [ "${{ matrix.sdk_branch }}" = "main" ]; then
-            TARGET_DIR="immortalwrt_master"
-          else
-            TARGET_DIR="${{ matrix.sdk_repo }}_${{ matrix.sdk_branch == 'main' && 'main' || 'stable' }}"
-          fi
-          [ -d "$TARGET_DIR" ] || TARGET_DIR="${{ matrix.env_key }}"
-          
+          TARGET_DIR="${{ matrix.env_key }}"
           cd "$TARGET_DIR"
           
-          if [[ "${{ matrix.sdk_branch }}" == "openwrt-25.12" ]]; then
+          if [[ "${{ matrix.feed_branch }}" == "openwrt-25.12" ]]; then
             echo "src-git packages https://github.com/${{ matrix.sdk_repo }}/packages.git;openwrt-25.12" > feeds.conf.default
             echo "src-git luci https://github.com/${{ matrix.sdk_repo }}/luci.git;openwrt-25.12" >> feeds.conf.default
             echo "src-git routing https://github.com/openwrt/routing.git;openwrt-25.12" >> feeds.conf.default
@@ -136,13 +131,7 @@ jobs:
 
       - name: Schritt 3 - scripts-part2.sh ausführen (Custom Packages & Netzwerk)
         run: |
-          if [ "${{ matrix.sdk_repo }}" = "immortalwrt" ] && [ "${{ matrix.sdk_branch }}" = "main" ]; then
-            TARGET_DIR="immortalwrt_master"
-          else
-            TARGET_DIR="${{ matrix.sdk_repo }}_${{ matrix.sdk_branch == 'main' && 'main' || 'stable' }}"
-          fi
-          [ -d "$TARGET_DIR" ] || TARGET_DIR="${{ matrix.env_key }}"
-          
+          TARGET_DIR="${{ matrix.env_key }}"
           cd "$TARGET_DIR"
 
           # scripts-part2.sh ausführen
@@ -160,11 +149,14 @@ jobs:
       - name: Docker-Konfiguration optional anhängen
         if: ${{ github.event.inputs.docker == 'true' }}
         run: |
-          if [ "${{ matrix.sdk_repo }}" = "immortalwrt" ] && [ -f "./config/immortalwrt.config" ]; then
-            cat ./config/immortalwrt.config >> "${{ matrix.env_key }}/.config"
-          elif [ -f "./config/docker.config" ]; then
-            cat ./config/docker.config >> "${{ matrix.env_key }}/.config"
+          TARGET_DIR="${{ matrix.env_key }}"
+          cd "$TARGET_DIR"
+          if [ "${{ matrix.sdk_repo }}" = "immortalwrt" ] && [ -f "$GITHUB_WORKSPACE/config/immortalwrt.config" ]; then
+            cat "$GITHUB_WORKSPACE/config/immortalwrt.config" >> .config
+          elif [ -f "$GITHUB_WORKSPACE/config/docker.config" ]; then
+            cat "$GITHUB_WORKSPACE/config/docker.config" >> .config
           fi
+          make defconfig
 
       - name: Paketquellen herunterladen (make download)
         run: |
