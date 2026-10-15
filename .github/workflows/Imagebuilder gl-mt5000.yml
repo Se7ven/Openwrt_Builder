@@ -46,7 +46,6 @@ jobs:
             build_dir: "openwrt_stable"
             tag_prefix: "openwrt-stable"
     
-    # Wenn der User im Dropdown nicht 'all' wählt, wird nur der Job ausgeführt, der zum Input passt
     if: ${{ inputs.target_env == 'all' || inputs.target_env == matrix.target_env }}
 
     env:
