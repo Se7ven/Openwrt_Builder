@@ -3,22 +3,17 @@ name: Imagebuilder gl-mt5000
 on:
   workflow_dispatch:
     inputs:
-      sdk_repo:
-        description: 'Distribution wählen'
+      target_env:
+        description: 'Build-Umgebung wählen'
         required: true
-        default: 'immortalwrt'
+        default: 'all'
         type: choice
         options:
-          - immortalwrt
-          - openwrt
-      sdk_branch:
-        description: 'Branch / Version wählen'
-        required: true
-        default: 'main'
-        type: choice
-        options:
-          - main
-          - stable
+          - all
+          - immortalwrt_master
+          - immortalwrt_stable
+          - openwrt_main
+          - openwrt_stable
 
 permissions:
   contents: write
@@ -26,12 +21,39 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    
-    # Dynamische Ordnerbenennung: immortalwrt + main wird zu immortalwrt_master
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target_env: immortalwrt_master
+            sdk_repo: "immortalwrt"
+            sdk_branch: "main"
+            build_dir: "immortalwrt_master"
+            tag_prefix: "immortalwrt-master"
+          - target_env: immortalwrt_stable
+            sdk_repo: "immortalwrt"
+            sdk_branch: "stable"
+            build_dir: "immortalwrt_stable"
+            tag_prefix: "immortalwrt-stable"
+          - target_env: openwrt_main
+            sdk_repo: "openwrt"
+            sdk_branch: "main"
+            build_dir: "openwrt_main"
+            tag_prefix: "openwrt-main"
+          - target_env: openwrt_stable
+            sdk_repo: "openwrt"
+            sdk_branch: "stable"
+            build_dir: "openwrt_stable"
+            tag_prefix: "openwrt-stable"
+
+    # Filtert die Matrix: Entweder laufen alle (bei 'all') oder nur der gewählte Ast
+    if: ${{ github.event.inputs.target_env == 'all' || matrix.target_env == github.event.inputs.target_env }}
+
     env:
-      INPUT_SDK_REPO: ${{ inputs.sdk_repo }}
-      INPUT_SDK_BRANCH: ${{ inputs.sdk_branch }}
-      BUILD_DIR: "${{ inputs.sdk_repo }}_${{ inputs.sdk_repo == 'immortalwrt' && inputs.sdk_branch == 'main' && 'master' || inputs.sdk_branch }}"
+      INPUT_SDK_REPO: ${{ matrix.sdk_repo }}
+      INPUT_SDK_BRANCH: ${{ matrix.sdk_branch }}
+      BUILD_DIR: ${{ matrix.build_dir }}
+      TAG_PREFIX: ${{ matrix.tag_prefix }}
 
     steps:
       - name: Checkout Repository
@@ -66,15 +88,15 @@ jobs:
       - name: Upload Firmware Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gl-mt5000-firmware-${{ inputs.sdk_repo }}-${{ inputs.sdk_branch }}
+          name: gl-mt5000-firmware-${{ matrix.target_env }}
           path: ${{ env.BUILD_DIR }}/bin/targets/mediatek/filogic/*-gl-mt5000-*
 
       - name: Create Release & Upload Firmware to Repository
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: Firmware-${{ inputs.sdk_repo }}-${{ inputs.sdk_branch }}-${{ github.run_number }}
-          name: "Auto-Build: ${{ inputs.sdk_repo }} (${{ inputs.sdk_branch }}) - GL-MT5000"
-          body: "Automatisch generierte Firmware für den GL.iNet GL-MT5000 (${{ inputs.sdk_repo }} - ${{ inputs.sdk_branch }})."
+          tag_name: Firmware-${{ matrix.target_env }}-${{ github.run_number }}
+          name: "Auto-Build: ${{ matrix.target_env }} - GL-MT5000"
+          body: "Automatisch generierte Patch-Build Firmware für den GL.iNet GL-MT5000 (${{ matrix.target_env }})."
           files: ${{ env.BUILD_DIR }}/bin/targets/mediatek/filogic/*-gl-mt5000-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
