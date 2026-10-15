@@ -1,0 +1,198 @@
+name: Build GL-MT5000 (GL-iNet Patch Basis / Universal)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Wähle die zu bauende Umgebung aus (GL-MT5000 Kernel-Basis):'
+        required: true
+        default: 'immortalwrt_master'
+        type: choice
+        options:
+          - immortalwrt_master
+          - immortalwrt_stable
+          - openwrt_main
+          - openwrt_stable
+          - all
+      docker:
+        description: 'Docker-Konfiguration einbinden (optional)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Matrix definieren (GL-MT5000 GL-iNet Quell-Basis)
+        id: set-matrix
+        run: |
+          ENV_CHOICE="${{ github.event.inputs.target_env }}"
+          if [ "$ENV_CHOICE" = "all" ]; then
+            echo 'matrix={"include":[' \
+              '{"env_key":"immortalwrt_master", "sdk_repo":"immortalwrt", "sdk_branch":"main", "feed_branch":"master", "config":"./config/immortalwrt.config", "tag_prefix":"immortalwrt-master"},' \
+              '{"env_key":"immortalwrt_stable", "sdk_repo":"immortalwrt", "sdk_branch":"openwrt-25.12", "feed_branch":"openwrt-25.12", "config":"./config/immortalwrt.config", "tag_prefix":"immortalwrt-25.12"},' \
+              '{"env_key":"openwrt_main", "sdk_repo":"openwrt", "sdk_branch":"main", "feed_branch":"master", "config":"./config/mt5000.config", "tag_prefix":"openwrt-main"},' \
+              '{"env_key":"openwrt_stable", "sdk_repo":"openwrt", "sdk_branch":"openwrt-25.12", "feed_branch":"openwrt-25.12", "config":"./config/mt5000.config", "tag_prefix":"openwrt-25.12"}' \
+              ']}' >> $GITHUB_OUTPUT
+          else
+            case "$ENV_CHOICE" in
+              immortalwrt_master)
+                echo 'matrix={"include":[{"env_key":"immortalwrt_master", "sdk_repo":"immortalwrt", "sdk_branch":"main", "feed_branch":"master", "config":"./config/immortalwrt.config", "tag_prefix":"immortalwrt-master"}]}' >> $GITHUB_OUTPUT
+                ;;
+              immortalwrt_stable)
+                echo 'matrix={"include":[{"env_key":"immortalwrt_stable", "sdk_repo":"immortalwrt", "sdk_branch":"openwrt-25.12", "feed_branch":"openwrt-25.12", "config":"./config/immortalwrt.config", "tag_prefix":"immortalwrt-25.12"}]}' >> $GITHUB_OUTPUT
+                ;;
+              openwrt_main)
+                echo 'matrix={"include":[{"env_key":"openwrt_main", "sdk_repo":"openwrt", "sdk_branch":"main", "feed_branch":"master", "config":"./config/mt5000.config", "tag_prefix":"openwrt-main"}]}' >> $GITHUB_OUTPUT
+                ;;
+              openwrt_stable)
+                echo 'matrix={"include":[{"env_key":"openwrt_stable", "sdk_repo":"openwrt", "sdk_branch":"openwrt-25.12", "feed_branch":"openwrt-25.12", "config":"./config/mt5000.config", "tag_prefix":"openwrt-stable-25.12"}]}' >> $GITHUB_OUTPUT
+                ;;
+            esac
+          fi
+
+  build:
+    needs: prepare-matrix
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+
+    name: GL-MT5000 Build (${{ matrix.env_key }})
+    env:
+      INPUT_SDK_REPO: ${{ matrix.sdk_repo }}
+      INPUT_SDK_BRANCH: ${{ matrix.sdk_branch }}
+      WORKFLOW_NAME: ${{ matrix.env_key }}
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Speicherplatz freigeben
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Build-Umgebung initialisieren
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          TZ: Europe/Berlin
+        run: |
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install -y dos2unix libfuse-dev build-essential libncurses5-dev gawk git libssl-dev gettext zlib1g-dev swig python3-distutils libelf-dev m4 flex bison
+          sudo timedatectl set-timezone "$TZ"
+          sudo mkdir -p /workdir
+          sudo chown $USER:$GROUPS /workdir
+
+      - name: Schritt 1 - Quellcode klonen (Nutzt GL-iNet MT5000 Patch-Basis via clone.sh)
+        working-directory: /workdir
+        run: |
+          bash "$GITHUB_WORKSPACE/sh/clone.sh"
+
+      - name: Feeds konfigurieren & Quell-Feeds anpassen (mit scripts-part1.sh)
+        run: |
+          if [ "${{ matrix.sdk_repo }}" = "immortalwrt" ] && [ "${{ matrix.sdk_branch }}" = "main" ]; then
+            TARGET_DIR="immortalwrt_master"
+          else
+            TARGET_DIR="${{ matrix.sdk_repo }}_${{ matrix.sdk_branch == 'main' && 'main' || 'stable' }}"
+          fi
+          [ -d "$TARGET_DIR" ] || TARGET_DIR="${{ matrix.env_key }}"
+          
+          cd "$TARGET_DIR"
+          
+          if [[ "${{ matrix.sdk_branch }}" == "openwrt-25.12" ]]; then
+            echo "src-git packages https://github.com/${{ matrix.sdk_repo }}/packages.git;openwrt-25.12" > feeds.conf.default
+            echo "src-git luci https://github.com/${{ matrix.sdk_repo }}/luci.git;openwrt-25.12" >> feeds.conf.default
+            echo "src-git routing https://github.com/openwrt/routing.git;openwrt-25.12" >> feeds.conf.default
+            echo "src-git telephony https://github.com/${{ matrix.sdk_repo }}/telephony.git;openwrt-25.12" >> feeds.conf.default
+          else
+            echo "src-git packages https://github.com/${{ matrix.sdk_repo }}/packages.git;master" > feeds.conf.default
+            echo "src-git luci https://github.com/${{ matrix.sdk_repo }}/luci.git;master" >> feeds.conf.default
+            echo "src-git routing https://github.com/openwrt/routing.git;master" >> feeds.conf.default
+            echo "src-git telephony https://github.com/openwrt/telephony.git;master" >> feeds.conf.default
+          fi
+          echo "src-git footstrap https://github.com/VizzleTF/luci-theme-footstrap.git" >> feeds.conf.default
+
+          if [ -f "$GITHUB_WORKSPACE/sh/scripts-part1.sh" ]; then
+            chmod +x "$GITHUB_WORKSPACE/sh/scripts-part1.sh"
+            "$GITHUB_WORKSPACE/sh/scripts-part1.sh"
+          fi
+
+      - name: Schritt 2 - Vorbereiten, Patchen & Custom Packages einbinden (mit prepare.sh & scripts-part2.sh)
+        run: |
+          bash sh/prepare.sh
+
+          if [ "${{ matrix.sdk_repo }}" = "immortalwrt" ] && [ "${{ matrix.sdk_branch }}" = "main" ]; then
+            TARGET_DIR="immortalwrt_master"
+          else
+            TARGET_DIR="${{ matrix.sdk_repo }}_${{ matrix.sdk_branch == 'main' && 'main' || 'stable' }}"
+          fi
+          [ -d "$TARGET_DIR" ] || TARGET_DIR="${{ matrix.env_key }}"
+          
+          cd "$TARGET_DIR"
+
+          if [ -f "$GITHUB_WORKSPACE/sh/scripts-part2.sh" ]; then
+            chmod +x "$GITHUB_WORKSPACE/sh/scripts-part2.sh"
+            "$GITHUB_WORKSPACE/sh/scripts-part2.sh"
+          fi
+
+          make defconfig
+
+      - name: Docker-Konfiguration optional anhängen
+        if: ${{ github.event.inputs.docker == 'true' }}
+        run: |
+          if [ "${{ matrix.sdk_repo }}" = "immortalwrt" ] && [ -f "./config/immortalwrt.config" ]; then
+            cat ./config/immortalwrt.config >> "${{ matrix.env_key }}/.config"
+          elif [ -f "./config/docker.config" ]; then
+            cat ./config/docker.config >> "${{ matrix.env_key }}/.config"
+          fi
+
+      - name: Paketquellen herunterladen (make download)
+        run: |
+          TARGET_DIR="${{ matrix.env_key }}"
+          cd "$TARGET_DIR"
+          make download -j8
+          find dl -size -1024c -exec rm -f {} \;
+
+      - name: Firmware kompilieren (GL-MT5000 Kernel & Treiber)
+        id: compile
+        run: |
+          TARGET_DIR="${{ matrix.env_key }}"
+          cd "$TARGET_DIR"
+          echo "$(nproc) Thread(s) beim Kompilieren"
+          make -j$(nproc) || make -j1 V=s
+          echo "compile=success" >> $GITHUB_OUTPUT
+          echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
+
+      - name: Schritt 3 - Finalisieren & Umbenennen (mit finalize.sh)
+        if: steps.compile.outputs.compile == 'success'
+        run: |
+          bash sh/finalize.sh
+
+      - name: Release erstellen und hochladen
+        uses: softprops/action-gh-release@v2
+        if: steps.compile.outputs.compile == 'success' && !cancelled()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: GL-MT5000_${{ matrix.tag_prefix }}_${{ steps.compile.outputs.file-date }}
+          name: GL-MT5000 (${{ matrix.env_key }}) Build ${{ steps.compile.outputs.file-date }}
+          body: Maßgeschneiderter GL-MT5000 (Brume 3) Build basierend auf den offiziellen GL-iNet Kernel-Quellen und Patches (${{ matrix.env_key }}).
+          files: |
+            */bin/targets/*/*/*sysupgrade*
+            */bin/targets/*/*/*factory*
+            */bin/targets/*/*/*manifest*
+            */bin/targets/*/*/*sha256sums
