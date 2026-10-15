@@ -112,7 +112,7 @@ rm -rf feeds/packages/net/openvswitch package/feeds/packages/openvswitch 2>/dev/
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
 # 2. MT5000 SPEZIFISCHE KONFIGURATIONEN & BRANDING
-if [[ "${WORKFLOW_NAME,,}" == *"mt5000"* || "${WORKFLOW_NAME,,}" == *"brume 3"* ]]; then
+if [[ "${WORKFLOW_NAME,,}" == *"mt5000"* || "${WORKFLOW_NAME,,}" == *"brume 3"* || "${WORKFLOW_NAME,,}" == *"immortalwrt"* || "${WORKFLOW_NAME,,}" == *"openwrt"* ]]; then
     echo ">>> Konfiguriere Netzwerk & Basis für GL-MT5000 <<<"
 
     mkdir -p package/base-files/files/etc/config
@@ -162,11 +162,11 @@ EOF
         sed -i 's/VERSION_DIST:=OpenWrt/VERSION_DIST:=ImmortalWrt/g' include/version.mk 2>/dev/null || true
         
         cat << 'EOF' > package/base-files/files/etc/banner
- _____                                _         _  __          __      _   
-|_   _|                              | |       | | \ \        / /     | |  
-  | |  _ __ ___  _ __ ___   ___  _ __| |_  __ _| |  \ \  /\  / /_ __  | |_ 
+ _____                                _         _  __          __      _    
+|_   _|                              | |       | | \ \        / /     | |   
+  | |  _ __ ___  _ __ ___   ___  _ __| |_  __ _| |  \ \  /\  / /_ __  | |_  
   | | | '_ ` _ \| '_ ` _ \ / _ \| '__| __|/ _` | |   \ \/  \/ /| '__| | __|
- _| |_| | | | | | | | | | | (_) | |  | |_| (_| | |    \  /\  / | |    | |_ 
+ _| |_| | | | | | | | | | | (_) | |  | |_| (_| | |    \  /\  / | |    | |_  
 |_____|_| |_| |_|_| |_| |_|\___/|_|   \__|\__,_|_|     \/  \/  |_|     \__|
  --------------------------------------------------------------------------
  ImmortalWrt GL-MT5000 (Brume 3)
