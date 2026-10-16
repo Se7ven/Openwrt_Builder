@@ -105,7 +105,7 @@ Dieses Repository enthält zwei unterschiedliche Build-Architekturen, die spezie
 
 - **m0eak** (für die Basisstruktur und das Template-Design)
 - **Kitsune2077** (für Beiträge und Referenzen aus dem `Kitsune2077/mt5000-immortalwrt` Repository)
-- **GL.iNet Tech** (for hardwarespezifische Patches und Kernel-Quellen)
+- **GL.iNet Tech** (für hardwarespezifische Patches und Kernel-Quellen)
 - **OpenWrt Project**
 - **ImmortalWrt Project**
 
