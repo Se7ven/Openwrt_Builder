@@ -29,7 +29,10 @@ if [ -d "$TARGET_DIR" ]; then
 fi
 
 # --- Tag-based clone: checkout a specific release tag (e.g. v25.12.5) ---
-if [ -n "$SDK_TAG" ]; then
+# NOTE: Tag-based cloning is only valid for stable/frozen builds.
+# When INPUT_SDK_TAG is set at workflow level it applies to ALL matrix entries
+# (including master/main via 'all' mode), so we must guard against it.
+if [ -n "$SDK_TAG" ] && [ "$SDK_BRANCH_TYPE" != "main" ]; then
     echo "===> Using release tag: $SDK_TAG for $SDK_REPO"
     git clone --depth 1 --branch "$SDK_TAG" --single-branch "$REPO_URL" "$TARGET_DIR" || {
         echo "===> ERROR: Failed to clone tag $SDK_TAG from $REPO_URL!"

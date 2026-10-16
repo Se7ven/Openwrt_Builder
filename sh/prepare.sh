@@ -39,7 +39,14 @@ cd "$OPENWRT_DIR"
 # =================================================================
 echo "===> Checking and applying MT5000 patches..."
 
-if [ "$SDK_BRANCH_TYPE" = "stable" ] || [[ "$SDK_BRANCH_TYPE" =~ 25\.12 ]] || [ -n "$SDK_TAG" ]; then
+# NOTE: Tag-based override only applies to stable builds (not master/main).
+# When INPUT_SDK_TAG is set at workflow level it applies to ALL matrix entries.
+TAG_FOR_STABLE=0
+if [ -n "$SDK_TAG" ] && [ "$SDK_BRANCH_TYPE" != "main" ]; then
+    TAG_FOR_STABLE=1
+fi
+
+if [ "$SDK_BRANCH_TYPE" = "stable" ] || [[ "$SDK_BRANCH_TYPE" =~ 25\.12 ]] || [ "$TAG_FOR_STABLE" = "1" ]; then
     PATCH_DIR="../patches-25.12"
     echo "Using patch directory for Stable/25.12 (Kernel 6.12): $PATCH_DIR"
 else
@@ -50,7 +57,7 @@ fi
 # Safety check: If the 795-10 kernel patch (RTL8366UB DSA driver) already exists,
 # the MT5000 patches have already been applied in this directory.
 KERNEL_SUBDIR="pending-6.18"
-if [ "$SDK_BRANCH_TYPE" = "stable" ] || [[ "$SDK_BRANCH_TYPE" =~ 25\.12 ]] || [ -n "$SDK_TAG" ]; then
+if [ "$SDK_BRANCH_TYPE" = "stable" ] || [[ "$SDK_BRANCH_TYPE" =~ 25\.12 ]] || [ "$TAG_FOR_STABLE" = "1" ]; then
     KERNEL_SUBDIR="pending-6.12"
 fi
 PATCH_GUARD="target/linux/generic/${KERNEL_SUBDIR}/795-10-net-dsa-realtek-add-rtl8366ub.patch"
