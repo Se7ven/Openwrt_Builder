@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# Dateiname: scripts-part1.sh
-# Beschreibung: OpenWrt DIY Skript Teil 1
+# Filename: scripts-part1.sh
+# Description: OpenWrt DIY Script Part 1
 #
 
-echo "--- DIY Part 1: Skriptausführung gestartet ---"
+echo "--- DIY Part 1: Script execution started ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
 echo "------------------------------------------"
 
@@ -12,10 +12,10 @@ set_default_ip() {
     local ip="$1"
     local label="$2"
     sed -i "s/192.168.1.1/$ip/g" package/base-files/files/bin/config_generate
-    echo "$label: Standard-IP geändert auf $ip"
+    echo "$label: Default IP changed to $ip"
 }
 
-# --- Andere Zielgeräte ---
+# --- Other target devices ---
 if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; then
     if [[ "$WORKFLOW_NAME" == "AXT-1800" ]]; then
         set_default_ip "192.168.8.1" "AXT-1800"
@@ -35,10 +35,10 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
     curl -fL "$CUSTOM_DTS_URL" -o "$CUSTOM_DTS_TARGET" 2>/dev/null || true
     set_default_ip "192.168.9.1" "mt3600be"
 
-# --- Alle MT5000 Workflows (Erweitert um die neuen Matrix-Namen) ---
+# --- All MT5000 workflows (Extended with new matrix names) ---
 elif [[ "$WORKFLOW_NAME" == "GL-MT5000" || "$WORKFLOW_NAME" == "gl-mt5000_immortalwrt" || "$WORKFLOW_NAME" == "Immortalwrt Brume 3 stable" || "$WORKFLOW_NAME" == "OpenWrt Brume 3 stable" || "$WORKFLOW_NAME" == "immortalwrt_master" || "$WORKFLOW_NAME" == "immortalwrt_stable" || "$WORKFLOW_NAME" == "openwrt_main" || "$WORKFLOW_NAME" == "openwrt_stable" ]]; then
-    echo ">>> Nativer GL.iNet MT5000 Quellbaum aktiv: Treiber bereits nativ vorhanden <<<"
+    echo ">>> Native GL.iNet MT5000 source tree active: drivers already natively present <<<"
     set_default_ip "192.168.100.1" "$WORKFLOW_NAME"
 fi
 
-echo "--- DIY Part 1: Skriptausführung beendet ---"
+echo "--- DIY Part 1: Script execution completed ---"

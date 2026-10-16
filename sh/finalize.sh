@@ -1,38 +1,38 @@
 #!/bin/bash
 # =================================================================
-# Finalize Script - Universelles Umbenennen aller Firmware-Artefakte
+# Finalize Script - Universal renaming of all firmware artifacts
 # =================================================================
 
-echo "--- Finalize: Starte Umbenennung der Firmware-Artefakte ---"
+echo "--- Finalize: Starting firmware artifact renaming ---"
 
-# Übergebenes Argument (Verzeichnis) nutzen, sonst Fallback auf aktuelles Verzeichnis oder Workspace
+# Use passed argument (directory), otherwise fall back to current directory or workspace
 TARGET_BASE="${1:-.}"
 
 IMAGE_DIR=""
 
-# Mögliche Pfade systematisch durchprobieren, egal aus welchem Workflow das Skript aufgerufen wird
+# Systematically try possible paths, regardless of which workflow called the script
 if [ -d "$TARGET_BASE/bin/targets/mediatek/filogic" ]; then
     IMAGE_DIR="$TARGET_BASE/bin/targets/mediatek/filogic"
 elif [ -d "bin/targets/mediatek/filogic" ]; then
     IMAGE_DIR="bin/targets/mediatek/filogic"
 else
-    # Automatische Tiefensuche nach dem Zielordner (deckt /workdir/ und Unterordner ab)
+    # Automatic deep search for the target directory (covers /workdir/ and subdirectories)
     FOUND_PATH=$(find . "$TARGET_BASE" /workdir -maxdepth 5 -type d -path "*/bin/targets/mediatek/filogic" 2>/dev/null | head -n 1)
     if [ -n "$FOUND_PATH" ]; then
         IMAGE_DIR="$FOUND_PATH"
     else
-        echo "===> FEHLER: Konnte kein gültiges Firmware-Verzeichnis (bin/targets/mediatek/filogic) finden!"
+        echo "===> ERROR: Could not find a valid firmware directory (bin/targets/mediatek/filogic)!"
         exit 1
     fi
 fi
 
-echo "===> Wechsle in das Firmware-Verzeichnis: $IMAGE_DIR"
+echo "===> Switching to firmware directory: $IMAGE_DIR"
 cd "$IMAGE_DIR" || {
-    echo "===> FEHLER: Konnte nicht in das Verzeichnis $IMAGE_DIR wechseln!"
+    echo "===> ERROR: Could not switch to directory $IMAGE_DIR!"
     exit 1
 }
 
-# 2. Präfix aus der Umgebung (Matrix tag_prefix) oder Fallback generieren
+# 2. Generate prefix from environment (matrix tag_prefix) or fallback
 DATE=$(date +'%Y%m%d')
 if [ -n "$TAG_PREFIX" ]; then
     PREFIX="${TAG_PREFIX}-${DATE}"
@@ -40,9 +40,9 @@ else
     PREFIX="gl-mt5000-${DATE}"
 fi
 
-echo "===> Verwende Datei-Präfix: $PREFIX"
+echo "===> Using file prefix: $PREFIX"
 
-# 3. Sysupgrade umbenennen
+# 3. Rename sysupgrade
 for f in *sysupgrade*; do
     if [ -f "$f" ]; then
         EXT="${f##*.}"
@@ -51,7 +51,7 @@ for f in *sysupgrade*; do
     fi
 done
 
-# 4. Factory umbenennen
+# 4. Rename factory
 for f in *factory*; do
     if [ -f "$f" ]; then
         EXT="${f##*.}"
@@ -60,7 +60,7 @@ for f in *factory*; do
     fi
 done
 
-# 5. Manifest umbenennen
+# 5. Rename manifest
 for f in *.manifest; do
     if [ -f "$f" ]; then
         TARGET_NAME="${PREFIX}-gl-mt5000.manifest"
@@ -68,7 +68,7 @@ for f in *.manifest; do
     fi
 done
 
-# 6. sha256sums umbenennen
+# 6. Rename sha256sums
 for f in sha256sums; do
     if [ -f "$f" ]; then
         TARGET_NAME="${PREFIX}-sha256sums"
@@ -76,5 +76,5 @@ for f in sha256sums; do
     fi
 done
 
-echo "===> Finalize erfolgreich abgeschlossen."
+echo "===> Finalize completed successfully."
 ls -la

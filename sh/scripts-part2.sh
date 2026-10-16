@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Dateiname: scripts-part2.sh
-# Beschreibung: OpenWrt DIY Skript Teil 2 (Bereinigt)
+# Filename: scripts-part2.sh
+# Description: OpenWrt DIY Script Part 2 (Cleaned)
 #
 
 TARGET_DIR="${PWD}/package/custom"
@@ -25,7 +25,7 @@ declare -A REPOS=(
 )
 
 CONFLICTING_MAKEFILE_KEYWORDS=(
-    # Keine Proxy-Keywords mehr nötig, aber Platzhalter für künftige Konflikte
+    # No more proxy keywords needed, but placeholder for future conflicts
 )
 
 patch_rust_makefile() {
@@ -70,21 +70,21 @@ clone_custom_repos() {
     done
 }
 
-echo "--- DIY Part 2: Skriptausführung gestartet ---"
+echo "--- DIY Part 2: Script execution started ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME"
 
-# 1. ZUERST ALLE PAKETE LADEN UND ABHÄNGIGKEITEN KLÄREN
+# 1. FIRST LOAD ALL PACKAGES AND RESOLVE DEPENDENCIES
 patch_rust_makefile
 reset_custom_package_dir
 remove_conflicting_makefiles
 clone_custom_repos
 
-# Kollidierende Standard-Pakete entfernen
+# Remove conflicting default packages
 rm -rf package/feeds/packages/net/weechat feeds/packages/net/weechat package/custom/luci-app-wechatpush 2>/dev/null || true
 
-# 2. MT5000 SPEZIFISCHE KONFIGURATIONEN & BRANDING
+# 2. MT5000-SPECIFIC CONFIGURATIONS & BRANDING
 if [[ "${WORKFLOW_NAME,,}" == *"mt5000"* || "${WORKFLOW_NAME,,}" == *"brume 3"* || "${WORKFLOW_NAME,,}" == *"immortalwrt"* || "${WORKFLOW_NAME,,}" == *"openwrt"* ]]; then
-    echo ">>> Konfiguriere Netzwerk & Basis für GL-MT5000 <<<"
+    echo ">>> Configure network & base for GL-MT5000 <<<"
 
     mkdir -p package/base-files/files/etc/config
     cat << 'EOF' > package/base-files/files/etc/config/network
@@ -111,8 +111,8 @@ config interface 'wan'
 	option proto 'dhcp'
 EOF
 
-    # Da die Custom-Themes (Aurora/Shadcn) entfernt wurden, greift wieder das Standard-Bootstrap-Theme
-    # Footstrap als Standard-Theme erzwingen
+    # Since the custom themes (Aurora/Shadcn) were removed, the default Bootstrap theme is used again
+    # Enforce Footstrap as default theme
     mkdir -p package/base-files/files/etc/uci-defaults/
     cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 uci set luci.main.mediaurlbase='/luci-static/footstrap'
@@ -121,9 +121,9 @@ exit 0
 EOF
     chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
-    # --- BRANDING NUR FÜR IMMORTALWRT WORKFLOWS ---
+    # --- BRANDING ONLY FOR IMMORTALWRT WORKFLOWS ---
     if [[ "${WORKFLOW_NAME,,}" == *"immortalwrt"* || "${WORKFLOW_NAME,,}" == *"immortal"* ]]; then
-        echo ">>> Setze ImmortalWrt Identität & Banner <<<"
+        echo ">>> Setting ImmortalWrt identity & banner <<<"
         
         cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-set-hostname
 uci set system.@system[0].hostname='ImmortalWrt'
@@ -148,4 +148,4 @@ EOF
     fi
 fi
 
-echo "--- DIY Part 2: Skriptausführung beendet ---"
+echo "--- DIY Part 2: Script execution completed ---"

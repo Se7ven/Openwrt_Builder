@@ -1,20 +1,20 @@
 #!/bin/bash
 # =================================================================
-# Prepare Script - Universell mit exakter 4-Ordner-Trennung, Patch-Schutz & Bereinigung
+# Prepare Script - Universal with exact 4-folder separation, patch protection & cleanup
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 SDK_BRANCH_TYPE="${INPUT_SDK_BRANCH:-main}"
 echo "===> Running preparation for repository: $SDK_REPO (Branch-Type: $SDK_BRANCH_TYPE)"
 
-# Exakte Ordner-Zuordnung passend zum Clone-Script und Workflow
+# Exact directory assignment matching the clone script and workflow
 if [ "$SDK_REPO" = "immortalwrt" ] && [ "$SDK_BRANCH_TYPE" = "main" ]; then
     OPENWRT_DIR="immortalwrt_master"
 else
     OPENWRT_DIR="${SDK_REPO}_${SDK_BRANCH_TYPE}"
 fi
 
-# Fallback-Prüfung, falls das Verzeichnis anders heißen sollte
+# Fallback check in case the directory has a different name
 if [ ! -d "$OPENWRT_DIR" ]; then
     if [ -d "immortalwrt_master" ]; then
         OPENWRT_DIR="immortalwrt_master"
@@ -25,81 +25,81 @@ if [ ! -d "$OPENWRT_DIR" ]; then
     elif [ -d "openwrt_stable" ]; then
         OPENWRT_DIR="openwrt_stable"
     else
-        echo "===> FEHLER: Kein passendes Zielverzeichnis für $SDK_REPO ($SDK_BRANCH_TYPE) gefunden!"
+        echo "===> ERROR: No matching target directory found for $SDK_REPO ($SDK_BRANCH_TYPE)!"
         exit 1
     fi
 fi
 
-echo "===> Verwende Quellverzeichnis: $OPENWRT_DIR"
+echo "===> Using source directory: $OPENWRT_DIR"
 cd "$OPENWRT_DIR"
 
 # =================================================================
-# 1. MT5000 Patches mit Schutz vor Mehrfach-Ausführung anwenden
+# 1. Apply MT5000 patches with protection against multiple execution
 # =================================================================
-echo "===> Prüfe und wende MT5000-Patches an..."
+echo "===> Checking and applying MT5000 patches..."
 
 if [ "$SDK_BRANCH_TYPE" = "stable" ] || [[ "$SDK_BRANCH_TYPE" =~ 25\.12 ]]; then
     PATCH_DIR="../patches-25.12"
-    echo "Verwende Patch-Ordner für Stable/25.12 (Kernel 6.12): $PATCH_DIR"
+    echo "Using patch directory for Stable/25.12 (Kernel 6.12): $PATCH_DIR"
 else
     PATCH_DIR="../patches"
-    echo "Verwende Patch-Ordner für Master/Main (Kernel 6.18): $PATCH_DIR"
+    echo "Using patch directory for Master/Main (Kernel 6.18): $PATCH_DIR"
 fi
 
-# Schutzprüfung: Wenn die MT5000 DTS bereits existiert, wurden the Patches schon angewendet
+# Safety check: If the MT5000 DTS already exists, the patches have already been applied
 if [ -f "target/linux/mediatek/dts/mt7987a-gl-mt5000.dts" ]; then
-    echo "===> HINWEIS: MT5000 Patches wurden in diesem Verzeichnis bereits angewendet. Überspringe Patch-Durchlauf."
+    echo "===> NOTE: MT5000 patches have already been applied in this directory. Skipping patch pass."
 else
     if [ -d "$PATCH_DIR" ]; then
         for patch in "$PATCH_DIR"/*.patch; do
             [ -e "$patch" ] || continue
-            echo "Wende Patch an: $(basename "$patch")"
+            echo "Applying patch: $(basename "$patch")"
             
-            # Versucht es zuerst mit git apply (-3), und weicht bei Versatz auf patch mit --fuzz=3 aus
+            # Try with git apply (-3) first, fall back to patch with --fuzz=3 if it fails
             git apply -3 "$patch" || patch -p1 --fuzz=3 < "$patch" || {
-                echo "FEHLER: Patch $(basename "$patch") konnte nicht angewendet werden!"
+                echo "ERROR: Patch $(basename "$patch") could not be applied!"
                 exit 1
             }
         done
-        echo "===> Alle MT5000-Patches erfolgreich angewendet."
+        echo "===> All MT5000 patches successfully applied."
     else
-        echo "===> WARNUNG: Patch-Ordner '$PATCH_DIR' nicht im Hauptverzeichnis gefunden!"
+        echo "===> WARNING: Patch directory '$PATCH_DIR' not found in main directory!"
     fi
 fi
 
-# Unabhängig davon: 795-12 Störenfried immer restlos entfernen, falls er aufgetaucht ist
-echo "===> Räume inkompatiblen Kernel-Patch 795-12 endgültig auf..."
+# Regardless: always completely remove the 795-12 nuisance package, if present
+echo "===> Cleaning up incompatible kernel patch 795-12 permanently..."
 rm -f target/linux/generic/pending-6.18/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch
 rm -f target/linux/generic/pending-6.12/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch
 # =================================================================
 
-# 2. filogic.mk injizieren (falls vorhanden)
+# 2. Inject filologie.mk (if available)
 if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
     echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
     mkdir -p "target/linux/mediatek/image"
     cp -f ../board/target/linux/mediatek/image/filogic.mk "target/linux/mediatek/image/"
 fi
 
-# 2b. mt7987a-gl-mt5000.dts in alle relevanten Pfade injizieren, damit relative Compiler-Pfeile greifen
+# 2b. Inject mt7987a-gl-mt5000.dts into all relevant paths so relative compiler include paths resolve
 if [ -f "../board/target/linux/mediatek/dts/mt7987a-gl-mt5000.dts" ]; then
     echo "===> Injecting custom mt7987a-gl-mt5000.dts into all required paths..."
     
-    # Standard-Pfad im Kernel-DTS-Baum
+    # Standard path in the kernel DTS tree
     mkdir -p "target/linux/mediatek/dts"
     cp -f ../board/target/linux/mediatek/dts/mt7987a-gl-mt5000.dts "target/linux/mediatek/dts/"
     
-    # Zusätzlich im Image-Ordner als dts/, damit ../dts/ greift
+    # Additionally in the image folder as dts/, so that ../dts/ resolves
     mkdir -p "target/linux/mediatek/image/dts"
     cp -f ../board/target/linux/mediatek/dts/mt7987a-gl-mt5000.dts "target/linux/mediatek/image/dts/"
 fi
 
-# 3. CUSTOM PACKAGES ORDNER EINBINDEN (Inklusive Footstrap Theme) & KONFLIKTE BEREINIGEN
+# 3. Include custom packages directory (Including Footstrap Theme) & clean up conflicts
 CUSTOM_DIR="package/custom"
 echo "===> Prepare custom packages directory: $CUSTOM_DIR"
 rm -rf "$CUSTOM_DIR"
 mkdir -p "$CUSTOM_DIR"
 
-# Footstrap Theme herunterladen, damit es direkt im Custom-Ordner liegt
+# Download Footstrap Theme so it resides directly in the custom directory
 echo "===> Cloning luci-theme-footstrap..."
 git clone --depth 1 https://github.com/VizzleTF/luci-theme-footstrap.git "$CUSTOM_DIR/luci-theme-footstrap"
 
@@ -113,15 +113,15 @@ for keyword in "${CONFLICTING_KEYWORDS[@]}"; do
 done
 rm -rf tmp/.config-package.in 2>/dev/null || true
 
-# 4. Feeds aktualisieren und installieren
+# 4. Update and install feeds
 echo "===> Updating and installing feeds..."
 ./scripts/feeds update -a && ./scripts/feeds install -a
 if [ $? -ne 0 ]; then
-    echo "===> FEHLER beim Aktualisieren/Installieren der Feeds!"
+    echo "===> ERROR while updating/installing feeds!"
     exit 1
 fi
 
-# 5. Radikales Löschen der Kconfig-Störenfriede nach Feed-Install
+# 5. Radically delete problematic Kconfig packages after feed install
 echo "===> Deleting recursive dependency packages completely..."
 rm -rf feeds/video/frameworks/qt5 2>/dev/null || true
 rm -rf feeds/packages/sound/squeezelite* 2>/dev/null || true
@@ -132,7 +132,7 @@ rm -rf package/feeds/*/weechat 2>/dev/null || true
 rm -rf package/feeds/*/squeezelite* 2>/dev/null || true
 rm -rf tmp/ 2>/dev/null || true
 
-# 6. Config-Datei ermitteln und kopieren
+# 6. Determine and copy config file
 CONFIG_FILE=""
 if [ "$SDK_REPO" = "openwrt" ]; then
     if [ -f "../config/mt5000.config" ]; then
@@ -156,11 +156,11 @@ if [ -n "$CONFIG_FILE" ]; then
     echo "===> Applying configuration: $CONFIG_FILE"
     cp "$CONFIG_FILE" .config
 else
-    echo "===> WARNUNG: Keine passende Config-Datei gefunden! Erstelle leere .config"
+    echo "===> WARNING: No matching config file found! Creating empty .config"
     touch .config
 fi
 
-# 7. Target-Konfiguration für GL-MT5000 bereinigen, erzwingen & Footstrap aktivieren
+# 7. Sanitize, force GL-MT5000 target configuration in .config & enable Footstrap
 echo "===> Sanitizing and forcing GL-MT5000 target configuration in .config..."
 sed -i '/CONFIG_TARGET_BOARD/d' .config
 sed -i '/CONFIG_TARGET_SUBTARGET/d' .config
@@ -180,8 +180,8 @@ CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt5000=y
 CONFIG_PACKAGE_luci-theme-footstrap=y
 EOF
 
-# 8. Netzwerkkonfiguration für GL-MT5000 hinterlegen & Footstrap als Standard-Theme setzen
-echo "===> Konfiguriere Netzwerk, Basis & Footstrap-Theme für GL-MT5000..."
+# 8. Store network configuration for GL-MT5000 & set Footstrap as default theme
+echo "===> Configure network, base & Footstrap Theme for GL-MT5000..."
 mkdir -p package/base-files/files/etc/config
 cat << 'EOF' > package/base-files/files/etc/config/network
 config interface 'loopback'
@@ -209,7 +209,7 @@ config interface 'wan'
 	option netmask '255.255.255.0'
 EOF
 
-# Footstrap UCI-Default setzen
+# Set Footstrap UCI defaults
 mkdir -p package/base-files/files/etc/uci-defaults/
 cat << 'EOF' > package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 uci set luci.main.mediaurlbase='/luci-static/footstrap'
@@ -218,14 +218,14 @@ exit 0
 EOF
 chmod +x package/base-files/files/etc/uci-defaults/99-default-theme-footstrap
 
-# 9. Konfigurationsabgleich
+# 9. Configuration sync
 echo "===> Running clean non-interactive config sync..."
 export TERM=dumb
 export DEBIAN_FRONTEND=noninteractive
 make defconfig
 
-echo "===> Verifiziere aktives Device in .config:"
-grep "gl-mt5000" .config || echo "ACHTUNG: gl-mt5000 wurde in .config nicht gefunden!"
+echo "===> Verifying active device in .config:"
+grep "gl-mt5000" .config || echo "WARNING: gl-mt5000 was not found in .config!"
 
 cd ..
 echo "===> Preparation completed successfully."
