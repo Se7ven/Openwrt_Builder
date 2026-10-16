@@ -1,4 +1,4 @@
-name: Build GL-MT5000 (GL-iNet Quellbasis mit Part1 & Part2)
+name: Build GL-MT5000 (GL-iNet source base with Part1 & Part2)
 
 on:
   workflow_dispatch:
