@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       target_env:
-        description: 'Build-Umgebung wählen'
+        description: 'Select build environment'
         required: true
         default: 'immortalwrt_master'
         type: choice
@@ -73,7 +73,7 @@ jobs:
         with:
           tag_name: Firmware-${{ matrix.config.target_env }}-${{ github.run_number }}
           name: "Auto-Build: ${{ matrix.config.target_env }} - GL-MT5000"
-          body: "Automatisch generierte Patch-Build Firmware für den GL.iNet GL-MT5000 (${{ matrix.config.target_env }})."
+          body: "Automatically generated patch-build firmware for GL.iNet GL-MT5000 (${{ matrix.config.target_env }})."
           files: ${{ env.BUILD_DIR }}/bin/targets/mediatek/filogic/*-gl-mt5000-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

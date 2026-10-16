@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       docker:
-        description: 'Docker einbinden'
+        description: 'Enable Docker'
         required: false
         default: 'false'
 
@@ -25,19 +25,19 @@ env:
 
 jobs:
   build:
-    name: Kompiliere GL-MT5000 Master
+    name: Compile GL-MT5000 Master
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Repository auschecken
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Speicherplatz freigeben
+      - name: Free up disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force
 
-      - name: Build-Umgebung initialisieren
+      - name: Initialize build environment
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -49,13 +49,13 @@ jobs:
           sudo chown $USER:$GROUPS /workdir
           echo "WORKFLOW_NAME=gl-mt5000_immortalwrt" >> $GITHUB_ENV
 
-      - name: Quellcode klonen
+      - name: Clone source code
         working-directory: /workdir
         run: |
           git clone --depth 1 -b mt5000 https://github.com/GLiNet-Tech/openwrt.git openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
-      - name: Feeds konfigurieren und DIY 1 ausführen
+      - name: Configure feeds and run DIY 1
         run: |
           cd openwrt
           echo "src-git packages https://github.com/immortalwrt/packages.git;master" > feeds.conf.default
@@ -67,7 +67,7 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Konfiguration anwenden und DIY 2 ausführen
+      - name: Apply configuration and run DIY 2
         run: |
           [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
           if [ "${{ github.event.inputs.docker }}" = "true" ] && [ -e $CONFIG_FILE_DOCKER ]; then
@@ -78,40 +78,40 @@ jobs:
           $GITHUB_WORKSPACE/$DIY_P2_SH
 
           make defconfig
-          echo "=== Überprüfe gewähltes Target-Gerät ==="
+          echo "=== Check selected target device ==="
           grep "CONFIG_TARGET.*DEVICE.*=y" .config || true
 
-      - name: Paketquellen herunterladen
+      - name: Download package sources
         run: |
           cd openwrt
           make download -j8
           find dl -size -1024c -exec rm -f {} \;
 
-      - name: Firmware kompilieren
+      - name: Compile firmware
         id: compile
         run: |
           cd openwrt
-          echo "$(nproc) Thread(s) beim Kompilieren"
+          echo "$(nproc) threads during compilation"
           make -j$(nproc) || make -j1 V=s
           grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
           echo "compile=success" >> $GITHUB_OUTPUT
           echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
           echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
-      - name: bin-Verzeichnis als Artefakt hochladen
+      - name: Upload bin directory as artifact
         uses: actions/upload-artifact@v4
         if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
         with:
           name: ImmortalWrt_bin_${{ steps.compile.outputs.device-name }}-${{ steps.compile.outputs.file-date }}
           path: openwrt/bin
 
-      - name: Release erstellen
+      - name: Create release
         uses: softprops/action-gh-release@v2
         if: steps.compile.outputs.compile == 'success' && !cancelled()
         with:
           name: ImmortalWrt Brume 3 (GL-MT5000) Master ${{ steps.compile.outputs.file-date }}
           tag_name: ImmortalWrt_GL-MT5000_master_${{ steps.compile.outputs.file-date }}
-          body: ImmortalWrt Master Feeds auf nativer mt5000 Konfiguration.
+          body: ImmortalWrt Master feeds on native mt5000 configuration.
           files: |
             openwrt/bin/targets/*/*/*sysupgrade*
             openwrt/bin/targets/*/*/*factory*

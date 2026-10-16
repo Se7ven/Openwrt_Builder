@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       target_env:
-        description: 'Wähle die zu bauende Umgebung aus:'
+        description: 'Select the environment to build:'
         required: true
         default: 'immortalwrt_master'
         type: choice
@@ -15,7 +15,7 @@ on:
           - openwrt_stable
           - all
       docker:
-        description: 'Docker-Konfiguration einbinden (optional)'
+        description: 'Enable Docker configuration (optional)'
         required: false
         default: false
         type: boolean
@@ -29,7 +29,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Matrix definieren
+      - name: Define matrix
         id: set-matrix
         run: |
           ENV_CHOICE="${{ github.event.inputs.target_env }}"
@@ -69,10 +69,10 @@ jobs:
       WORKFLOW_NAME: ${{ matrix.env_key }}
 
     steps:
-      - name: Repository auschecken
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Speicherplatz freigeben
+      - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: false
@@ -83,7 +83,7 @@ jobs:
           docker-images: true
           swap-storage: true
 
-      - name: Build-Umgebung initialisieren
+      - name: Initialize build environment
         env:
           DEBIAN_FRONTEND: noninteractive
           TZ: Europe/Berlin
@@ -95,15 +95,15 @@ jobs:
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
 
-      - name: Schritt 1 - Offiziellen GL.iNet MT5000 Quellbaum klonen
+      - name: Step 1 - Clone official GL.iNet MT5000 source tree
         working-directory: /workdir
         run: |
           TARGET_DIR="${{ matrix.env_key }}"
-          echo "===> Kloniere GL.iNet MT5000 Quellbaum (Branch: mt5000) nach $TARGET_DIR"
+          echo "===> Cloning GL.iNet MT5000 source tree (Branch: mt5000) to $TARGET_DIR"
           git clone --depth 1 -b mt5000 https://github.com/GLiNet-Tech/openwrt.git "$TARGET_DIR"
           ln -sf "/workdir/$TARGET_DIR" "$GITHUB_WORKSPACE/$TARGET_DIR"
 
-      - name: Schritt 2 - Feeds & scripts-part1.sh ausführen
+      - name: Step 2 - Run feeds & scripts-part1.sh
         run: |
           TARGET_DIR="${{ matrix.env_key }}"
           cd "$TARGET_DIR"
@@ -120,7 +120,7 @@ jobs:
           fi
           echo "src-git footstrap https://github.com/VizzleTF/luci-theme-footstrap.git" >> feeds.conf.default
 
-          # scripts-part1.sh ausführen
+          # Run scripts-part1.sh
           if [ -f "$GITHUB_WORKSPACE/sh/scripts-part1.sh" ]; then
             chmod +x "$GITHUB_WORKSPACE/sh/scripts-part1.sh"
             "$GITHUB_WORKSPACE/sh/scripts-part1.sh"
@@ -129,24 +129,24 @@ jobs:
           ./scripts/feeds update -a || true
           ./scripts/feeds install -a
 
-      - name: Schritt 3 - scripts-part2.sh ausführen (Custom Packages & Netzwerk)
+      - name: Step 3 - Run scripts-part2.sh (Custom Packages & Network)
         run: |
           TARGET_DIR="${{ matrix.env_key }}"
           cd "$TARGET_DIR"
 
-          # scripts-part2.sh ausführen
+          # Run scripts-part2.sh
           if [ -f "$GITHUB_WORKSPACE/sh/scripts-part2.sh" ]; then
             chmod +x "$GITHUB_WORKSPACE/sh/scripts-part2.sh"
             "$GITHUB_WORKSPACE/sh/scripts-part2.sh"
           fi
 
-          # Config anwenden
+          # Apply config
           CONFIG_FILE="$GITHUB_WORKSPACE/${{ matrix.config }}"
           [ -f "$CONFIG_FILE" ] && cp "$CONFIG_FILE" .config
 
           make defconfig
 
-      - name: Docker-Konfiguration optional anhängen
+      - name: Append optional Docker configuration
         if: ${{ github.event.inputs.docker == 'true' }}
         run: |
           TARGET_DIR="${{ matrix.env_key }}"
@@ -158,29 +158,29 @@ jobs:
           fi
           make defconfig
 
-      - name: Paketquellen herunterladen (make download)
+      - name: Download package sources (make download)
         run: |
           TARGET_DIR="${{ matrix.env_key }}"
           cd "$TARGET_DIR"
           make download -j8
           find dl -size -1024c -exec rm -f {} \;
 
-      - name: Firmware kompilieren
+      - name: Compile firmware
         id: compile
         run: |
           TARGET_DIR="${{ matrix.env_key }}"
           cd "$TARGET_DIR"
-          echo "$(nproc) Thread(s) beim Kompilieren"
+          echo "$(nproc) threads during compilation"
           make -j$(nproc) || make -j1 V=s
           echo "compile=success" >> $GITHUB_OUTPUT
           echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
-      - name: Schritt 4 - Finalisieren & Umbenennen (finalize.sh)
+      - name: Step 4 - Finalize & rename (finalize.sh)
         if: steps.compile.outputs.compile == 'success'
         run: |
           bash sh/finalize.sh "${{ matrix.env_key }}"
 
-      - name: Release erstellen und hochladen
+      - name: Create and upload release
         uses: softprops/action-gh-release@v2
         if: steps.compile.outputs.compile == 'success' && !cancelled()
         env:
@@ -188,7 +188,7 @@ jobs:
         with:
           tag_name: GL-MT5000_${{ matrix.tag_prefix }}_${{ steps.compile.outputs.file-date }}
           name: GL-MT5000 (${{ matrix.env_key }}) Build ${{ steps.compile.outputs.file-date }}
-          body: Maßgeschneiderter GL-MT5000 Build basierend auf den originalen GL-iNet Quellen mit Part1 und Part2 Anpassungen (${{ matrix.env_key }}).
+          body: Custom GL-MT5000 build based on original GL-iNet sources with Part1 and Part2 modifications (${{ matrix.env_key }}).
           files: |
             ${{ matrix.env_key }}/bin/targets/*/*/*sysupgrade*
             ${{ matrix.env_key }}/bin/targets/*/*/*factory*
