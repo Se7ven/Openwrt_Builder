@@ -5,7 +5,8 @@
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 SDK_BRANCH_TYPE="${INPUT_SDK_BRANCH:-main}"
-echo "===> Running preparation for repository: $SDK_REPO (Branch-Type: $SDK_BRANCH_TYPE)"
+SDK_TAG="${INPUT_SDK_TAG:-}"
+echo "===> Running preparation for repository: $SDK_REPO (Branch-Type: $SDK_BRANCH_TYPE, Tag: ${SDK_TAG:-none})"
 
 # Exact directory assignment matching the clone script and workflow
 if [ "$SDK_REPO" = "immortalwrt" ] && [ "$SDK_BRANCH_TYPE" = "main" ]; then
@@ -38,7 +39,7 @@ cd "$OPENWRT_DIR"
 # =================================================================
 echo "===> Checking and applying MT5000 patches..."
 
-if [ "$SDK_BRANCH_TYPE" = "stable" ] || [[ "$SDK_BRANCH_TYPE" =~ 25\.12 ]]; then
+if [ "$SDK_BRANCH_TYPE" = "stable" ] || [[ "$SDK_BRANCH_TYPE" =~ 25\.12 ]] || [ -n "$SDK_TAG" ]; then
     PATCH_DIR="../patches-25.12"
     echo "Using patch directory for Stable/25.12 (Kernel 6.12): $PATCH_DIR"
 else
@@ -46,8 +47,14 @@ else
     echo "Using patch directory for Master/Main (Kernel 6.18): $PATCH_DIR"
 fi
 
-# Safety check: If the MT5000 DTS already exists, the patches have already been applied
-if [ -f "target/linux/mediatek/dts/mt7987a-gl-mt5000.dts" ]; then
+# Safety check: If the 795-10 kernel patch (RTL8366UB DSA driver) already exists,
+# the MT5000 patches have already been applied in this directory.
+KERNEL_SUBDIR="pending-6.18"
+if [ "$SDK_BRANCH_TYPE" = "stable" ] || [[ "$SDK_BRANCH_TYPE" =~ 25\.12 ]] || [ -n "$SDK_TAG" ]; then
+    KERNEL_SUBDIR="pending-6.12"
+fi
+PATCH_GUARD="target/linux/generic/${KERNEL_SUBDIR}/795-10-net-dsa-realtek-add-rtl8366ub.patch"
+if [ -f "$PATCH_GUARD" ]; then
     echo "===> NOTE: MT5000 patches have already been applied in this directory. Skipping patch pass."
 else
     if [ -d "$PATCH_DIR" ]; then
@@ -73,7 +80,7 @@ rm -f target/linux/generic/pending-6.18/795-12-net-mediatek-init-dummy-napi-befo
 rm -f target/linux/generic/pending-6.12/795-12-net-mediatek-init-dummy-napi-before-netdev-registration.patch
 # =================================================================
 
-# 2. Inject filologie.mk (if available)
+# 2. Inject filogic.mk (if available)
 if [ -f "../board/target/linux/mediatek/image/filogic.mk" ]; then
     echo "===> Injecting custom filogic.mk for GL-MT5000 definition..."
     mkdir -p "target/linux/mediatek/image"
@@ -204,9 +211,7 @@ config interface 'lan'
 
 config interface 'wan'
 	option device 'eth1'
-	option proto 'static'
-	option ipaddr '192.168.10.1'
-	option netmask '255.255.255.0'
+	option proto 'dhcp'
 EOF
 
 # Set Footstrap UCI defaults

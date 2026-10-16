@@ -1,10 +1,12 @@
 #!/bin/bash
 # =================================================================
 # Clone Script - Exact 4-folder separation with branch assignment
+# Supports both branch-based and tag-based (release) cloning.
 # =================================================================
 
 SDK_REPO="${INPUT_SDK_REPO:-immortalwrt}"
 SDK_BRANCH_TYPE="${INPUT_SDK_BRANCH:-main}"
+SDK_TAG="${INPUT_SDK_TAG:-}"
 
 # Determines the exact target directory (immortalwrt_master, openwrt_main, etc.)
 if [ "$SDK_REPO" = "immortalwrt" ] && [ "$SDK_BRANCH_TYPE" = "main" ]; then
@@ -26,23 +28,33 @@ if [ -d "$TARGET_DIR" ]; then
     rm -rf "$TARGET_DIR"
 fi
 
-if [ "$SDK_BRANCH_TYPE" = "main" ]; then
+# --- Tag-based clone: checkout a specific release tag (e.g. v25.12.5) ---
+if [ -n "$SDK_TAG" ]; then
+    echo "===> Using release tag: $SDK_TAG for $SDK_REPO"
+    git clone --depth 1 --branch "$SDK_TAG" --single-branch "$REPO_URL" "$TARGET_DIR" || {
+        echo "===> ERROR: Failed to clone tag $SDK_TAG from $REPO_URL!"
+        exit 1
+    }
+    echo "===> Checked out release tag '$SDK_TAG' (stable, Kernel 6.12)."
+# --- Main/master clone ---
+elif [ "$SDK_BRANCH_TYPE" = "main" ]; then
     echo "===> Using Main/Master branch: $TARGET_BRANCH for $SDK_REPO"
     git clone -b "$TARGET_BRANCH" --single-branch "$REPO_URL" "$TARGET_DIR" || {
         echo "===> ERROR during cloning!"
         exit 1
     }
+# --- Stable branch clone: find latest openwrt-XX.YY branch ---
 else
     echo "===> Using Stable branch mode for $SDK_REPO..."
     git clone "$REPO_URL" "$TARGET_DIR" || {
         echo "===> ERROR cloning repository!"
         exit 1
     }
-    
+
     cd "$TARGET_DIR" || exit 1
-    
+
     LATEST_STABLE=$(git branch -r | grep -oE 'origin/openwrt-[0-9]+\.[0-9]+' | sed 's|origin/||' | sort -V | tail -n 1)
-    
+
     if [ -z "$LATEST_STABLE" ]; then
         echo "===> WARNING: Could not find a stable branch, using default branch!"
     else

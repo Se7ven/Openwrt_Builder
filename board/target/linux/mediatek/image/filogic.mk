@@ -9,7 +9,7 @@ define Image/Prepare
 endef
 
 # =================================================================
-# NUR DAS GL-MT5000 TARGET BEHALTEN, ALLES ANDERE ENTFERNT
+# KEEP ONLY THE GL-MT5000 TARGET, REMOVE EVERYTHING ELSE
 # =================================================================
 
 define Device/glinet_gl-mt5000
