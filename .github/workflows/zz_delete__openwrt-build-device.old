@@ -64,7 +64,7 @@ jobs:
   build:
     name: Compile ${{ inputs.device }}
     # Fixed Ubuntu version: Workarounds for runner hang/timeouts are active
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     env:
       GOTOOLCHAIN: path
     steps:

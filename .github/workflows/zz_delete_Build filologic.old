@@ -35,7 +35,7 @@ jobs:
   publish_release:
     name: 合并并发布固件
     needs: build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     if: success()
     steps:
       - name: Checkout repository

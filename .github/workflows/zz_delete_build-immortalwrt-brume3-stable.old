@@ -21,7 +21,7 @@ env:
 jobs:
   build:
     name: Compile GL-MT5000 Stable
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout repository
