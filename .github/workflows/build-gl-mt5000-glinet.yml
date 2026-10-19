@@ -187,8 +187,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: GL-MT5000_${{ matrix.tag_prefix }}_${{ steps.compile.outputs.file-date }}
-          name: GL-MT5000 (${{ matrix.env_key }}) Build ${{ steps.compile.outputs.file-date }}
+          tag_name: GL-MT5000_glinet_src_${{ matrix.tag_prefix }}_${{ matrix.sdk_tag }}
+          name: GL-MT5000 GL-iNet SRC (${{ matrix.env_key }}) Build ${{ matrix.tag_prefix }} ${{ matrix.sdk_tag }}
           body: Custom GL-MT5000 build based on original GL-iNet sources with Part1 and Part2 modifications (${{ matrix.env_key }}).
           files: |
             ${{ matrix.env_key }}/bin/targets/*/*/*sysupgrade*

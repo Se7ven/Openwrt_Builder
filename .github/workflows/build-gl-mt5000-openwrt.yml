@@ -112,8 +112,8 @@ jobs:
       - name: Create Release & Upload Firmware to Repository
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: Firmware-${{ matrix.config.target_env }}-${{ github.run_number }}
-          name: "Auto-Build: ${{ matrix.config.target_env }} - GL-MT5000"
+          tag_name: GL-MT5000_openwrt_src_${{ matrix.tag_prefix }}_${{ matrix.sdk_tag }}
+          name: GL-MT5000 OpenWrt SRC (${{ matrix.env_key }}) Build ${{ matrix.tag_prefix }} ${{ matrix.sdk_tag }}
           body: "Automatically generated patch-build firmware for GL.iNet GL-MT5000 (${{ matrix.config.target_env }})."
           files: ${{ env.BUILD_DIR }}/bin/targets/mediatek/filogic/*-gl-mt5000-*
         env:
