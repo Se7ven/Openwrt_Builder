@@ -88,9 +88,9 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
           TZ: Europe/Berlin
         run: |
-#          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-#          sudo -E apt-get -qq update
-#          sudo -E apt-get -qq install -y dos2unix libfuse-dev build-essential libncurses5-dev gawk git libssl-dev gettext zlib1g-dev swig python3-distutils libelf-dev m4 flex bison
+          #sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          #sudo -E apt-get -qq update
+          #sudo -E apt-get -qq install -y dos2unix libfuse-dev build-essential libncurses5-dev gawk git libssl-dev gettext zlib1g-dev swig python3-distutils libelf-dev m4 flex bison
           sudo timedatectl set-timezone "$TZ"
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
